@@ -56,6 +56,7 @@ const previewPenEraserOptions = document.getElementById('previewPenEraserOptions
 const previewEraserSize = document.getElementById('previewEraserSize');
 const previewPenClear = document.getElementById('previewPenClear');
 const previewPenUndo = document.getElementById('previewPenUndo');
+const previewPenRedo = document.getElementById('previewPenRedo');
 
 // Markdown 相关 DOM
 const previewMarkdownViewer = document.getElementById('previewMarkdownViewer');
@@ -90,6 +91,7 @@ let isDrawing = false;
 let isEraser = false;
 let lastX = 0, lastY = 0;
 let drawingHistory = [];
+let redoHistory = [];
 let pageDrawings = {};
 let drawingCtx = null;
 
@@ -398,6 +400,7 @@ function resetPreview() {
     penEnabled = false;
     isEraser = false;
     drawingHistory = [];
+    redoHistory = [];
     pageDrawings = {};
     previewPenToggle.classList.remove('active');
     previewPenEraser.classList.remove('active');
@@ -488,6 +491,8 @@ async function renderPdfPage(pageNum) {
 
         restorePageDrawing(pageNum);
         drawingHistory = [];
+        redoHistory = [];
+        updatePenToolsState();
         updatePageButtons();
     } finally {
         rendering = false;
@@ -608,6 +613,7 @@ function restorePageDrawing(pageNum) {
 function saveDrawingState() {
     if (!previewDrawingCanvas) return;
     drawingHistory.push(previewDrawingCanvas.toDataURL());
+    redoHistory = [];  // 新绘制操作时清空重做历史
     if (drawingHistory.length > 20) drawingHistory.shift();
 }
 
@@ -616,17 +622,59 @@ function clearDrawing() {
     saveDrawingState();
     drawingCtx.clearRect(0, 0, previewDrawingCanvas.width, previewDrawingCanvas.height);
     delete pageDrawings[currentPage];
+    updatePenToolsState();
 }
 
 function undoDrawing() {
     if (drawingHistory.length === 0 || !drawingCtx) return;
+    // 保存当前状态到重做历史
+    redoHistory.push(previewDrawingCanvas.toDataURL());
+    if (redoHistory.length > 20) redoHistory.shift();
+
     const previousState = drawingHistory.pop();
     const img = new Image();
     img.onload = () => {
         drawingCtx.clearRect(0, 0, previewDrawingCanvas.width, previewDrawingCanvas.height);
         drawingCtx.drawImage(img, 0, 0);
+        saveCurrentPageDrawing();
+        updatePenToolsState();
     };
     img.src = previousState;
+}
+
+function redoDrawing() {
+    if (redoHistory.length === 0 || !drawingCtx) return;
+    // 保存当前状态到撤销历史
+    drawingHistory.push(previewDrawingCanvas.toDataURL());
+    if (drawingHistory.length > 20) drawingHistory.shift();
+
+    const nextState = redoHistory.pop();
+    const img = new Image();
+    img.onload = () => {
+        drawingCtx.clearRect(0, 0, previewDrawingCanvas.width, previewDrawingCanvas.height);
+        drawingCtx.drawImage(img, 0, 0);
+        saveCurrentPageDrawing();
+        updatePenToolsState();
+    };
+    img.src = nextState;
+}
+
+function isCanvasEmpty() {
+    if (!previewDrawingCanvas || !drawingCtx) return true;
+    const pixelData = drawingCtx.getImageData(0, 0, previewDrawingCanvas.width, previewDrawingCanvas.height).data;
+    for (let i = 3; i < pixelData.length; i += 4) {
+        if (pixelData[i] !== 0) return false;
+    }
+    return true;
+}
+
+function updatePenToolsState() {
+    if (!previewPenEraser || !previewPenClear || !previewPenUndo || !previewPenRedo) return;
+    const canvasEmpty = isCanvasEmpty();
+    previewPenEraser.disabled = canvasEmpty;
+    previewPenClear.disabled = canvasEmpty;
+    previewPenUndo.disabled = drawingHistory.length === 0;
+    previewPenRedo.disabled = redoHistory.length === 0;
 }
 
 function getCanvasCoords(e) {
@@ -680,6 +728,7 @@ function stopDrawing() {
     if (isDrawing) {
         isDrawing = false;
         saveCurrentPageDrawing();
+        updatePenToolsState();
     }
 }
 
@@ -926,6 +975,7 @@ function bindEvents() {
     previewPenEraser.addEventListener('click', toggleEraser);
     previewPenClear.addEventListener('click', clearDrawing);
     previewPenUndo.addEventListener('click', undoDrawing);
+    previewPenRedo.addEventListener('click', redoDrawing);
     previewEraserSize.addEventListener('change', () => { if (isEraser) updateEraserCursor(); });
 
     // 颜色预设

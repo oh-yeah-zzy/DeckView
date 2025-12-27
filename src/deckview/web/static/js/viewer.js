@@ -25,7 +25,7 @@ let fitPageBtn, fitWidthBtn, fullscreenBtn, sidebarToggle, sidebarExpandBtn;
 // 画笔相关DOM引用
 let penTools, penToggle, penBrushOptions, penEraserOptions;
 let penColor, penSize, eraserSize;
-let penEraser, penClear, penUndo, drawingCanvas, drawingCtx;
+let penEraser, penClear, penUndo, penRedo, drawingCanvas, drawingCtx;
 
 // 画笔状态
 let penEnabled = false;      // 画笔是否启用
@@ -33,6 +33,7 @@ let isDrawing = false;       // 是否正在绘制
 let isEraser = false;        // 是否橡皮擦模式
 let lastX = 0, lastY = 0;    // 上一个绘制点
 let drawingHistory = [];     // 绘制历史（用于撤销）
+let redoHistory = [];        // 重做历史
 let pageDrawings = {};       // 每页的绘制数据
 
 // ========== Markdown 编辑器状态 ==========
@@ -90,6 +91,7 @@ function initDOMReferences() {
     penEraser = document.getElementById('penEraser');
     penClear = document.getElementById('penClear');
     penUndo = document.getElementById('penUndo');
+    penRedo = document.getElementById('penRedo');
     drawingCanvas = document.getElementById('drawingCanvas');
     if (drawingCanvas) {
         drawingCtx = drawingCanvas.getContext('2d');
@@ -276,8 +278,12 @@ async function renderPage(pageNum) {
         // 恢复该页的绘制内容
         restorePageDrawing(pageNum);
 
-        // 清空撤销历史（切换页面时）
+        // 清空撤销和重做历史（切换页面时）
         drawingHistory = [];
+        redoHistory = [];
+
+        // 更新画笔工具按钮状态
+        updatePenToolsState();
 
         // 更新按钮状态
         updatePageButtons();
@@ -1028,6 +1034,9 @@ function clearDrawing() {
 
     // 清除保存的绘制数据
     delete pageDrawings[currentPage];
+
+    // 更新按钮状态
+    updatePenToolsState();
 }
 
 /**
@@ -1036,6 +1045,8 @@ function clearDrawing() {
 function saveDrawingState() {
     if (!drawingCanvas) return;
     drawingHistory.push(drawingCanvas.toDataURL());
+    // 新绘制操作时清空重做历史
+    redoHistory = [];
     // 限制历史记录数量
     if (drawingHistory.length > 20) {
         drawingHistory.shift();
@@ -1048,13 +1059,80 @@ function saveDrawingState() {
 function undoDrawing() {
     if (drawingHistory.length === 0 || !drawingCtx) return;
 
+    // 保存当前状态到重做历史
+    redoHistory.push(drawingCanvas.toDataURL());
+    if (redoHistory.length > 20) {
+        redoHistory.shift();
+    }
+
     const previousState = drawingHistory.pop();
     const img = new Image();
     img.onload = () => {
         drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
         drawingCtx.drawImage(img, 0, 0);
+        // 更新页面绘制数据
+        saveCurrentPageDrawing();
+        // 更新按钮状态
+        updatePenToolsState();
     };
     img.src = previousState;
+}
+
+/**
+ * 重做上一步撤销的绘制
+ */
+function redoDrawing() {
+    if (redoHistory.length === 0 || !drawingCtx) return;
+
+    // 保存当前状态到撤销历史
+    drawingHistory.push(drawingCanvas.toDataURL());
+    if (drawingHistory.length > 20) {
+        drawingHistory.shift();
+    }
+
+    const nextState = redoHistory.pop();
+    const img = new Image();
+    img.onload = () => {
+        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        drawingCtx.drawImage(img, 0, 0);
+        // 更新页面绘制数据
+        saveCurrentPageDrawing();
+        // 更新按钮状态
+        updatePenToolsState();
+    };
+    img.src = nextState;
+}
+
+/**
+ * 检查画布是否为空
+ */
+function isCanvasEmpty() {
+    if (!drawingCanvas || !drawingCtx) return true;
+    const pixelData = drawingCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height).data;
+    // 检查是否所有像素的 alpha 值都为 0
+    for (let i = 3; i < pixelData.length; i += 4) {
+        if (pixelData[i] !== 0) return false;
+    }
+    return true;
+}
+
+/**
+ * 更新画笔工具按钮状态
+ */
+function updatePenToolsState() {
+    if (!penEraser || !penClear || !penUndo || !penRedo) return;
+
+    const canvasEmpty = isCanvasEmpty();
+
+    // 橡皮擦和清除：画布为空时禁用
+    penEraser.disabled = canvasEmpty;
+    penClear.disabled = canvasEmpty;
+
+    // 撤销：历史为空时禁用
+    penUndo.disabled = drawingHistory.length === 0;
+
+    // 重做：重做历史为空时禁用
+    penRedo.disabled = redoHistory.length === 0;
 }
 
 /**
@@ -1140,6 +1218,8 @@ function stopDrawing(e) {
         isDrawing = false;
         // 保存当前页的绘制内容
         saveCurrentPageDrawing();
+        // 更新按钮状态
+        updatePenToolsState();
     }
 }
 
@@ -1217,6 +1297,11 @@ function bindPenEvents() {
     // 撤销
     if (penUndo) {
         penUndo.addEventListener('click', undoDrawing);
+    }
+
+    // 重做
+    if (penRedo) {
+        penRedo.addEventListener('click', redoDrawing);
     }
 
     // 鼠标绘制事件
