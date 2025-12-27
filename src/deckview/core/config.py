@@ -8,6 +8,15 @@ from typing import Optional, Set, List
 from pydantic_settings import BaseSettings
 
 
+def get_default_data_dir() -> Path:
+    """获取默认数据目录（用户主目录下的 .deckview）"""
+    # 优先使用环境变量
+    if env_data_dir := os.environ.get("DECKVIEW_DATA_DIR"):
+        return Path(env_data_dir)
+    # 默认使用用户主目录
+    return Path.home() / ".deckview"
+
+
 class Settings(BaseSettings):
     """应用配置类"""
 
@@ -23,9 +32,8 @@ class Settings(BaseSettings):
     # 内容目录（核心配置：指定要扫描的文档目录）
     CONTENT_DIR: Optional[Path] = None
 
-    # 项目路径配置
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
-    DATA_DIR: Path = BASE_DIR / "data"
+    # 数据目录配置（默认使用用户主目录下的 .deckview）
+    DATA_DIR: Path = get_default_data_dir()
     CONVERTED_DIR: Path = DATA_DIR / "converted"
     THUMBNAIL_DIR: Path = DATA_DIR / "thumbnails"
     CACHE_DIR: Path = DATA_DIR / "cache"

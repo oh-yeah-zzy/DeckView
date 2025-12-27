@@ -76,7 +76,7 @@ def main():
         sys.exit(1)
 
     # 设置内容目录
-    from backend.app.core.config import set_content_dir, settings, ensure_directories
+    from deckview.core.config import set_content_dir, settings, ensure_directories
     set_content_dir(content_dir)
     ensure_directories()
 
@@ -100,7 +100,7 @@ def main():
     # 启动uvicorn
     import uvicorn
     uvicorn.run(
-        "backend.app.main:app",
+        "deckview.main:app",
         host=args.host,
         port=args.port,
         reload=args.reload,

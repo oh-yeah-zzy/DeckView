@@ -22,37 +22,30 @@
 ### 安装
 
 ```bash
-# 进入项目目录
-cd DeckView
+# 方式一：pip 安装（推荐）
+pip install .
 
-# 创建虚拟环境
-python3 -m venv venv
-
-# 激活虚拟环境
-source venv/bin/activate  # Linux/macOS
-# venv\Scripts\activate   # Windows
-
-# 安装依赖
-pip install -r requirements.txt
+# 方式二：开发模式安装
+pip install -e .
 ```
 
 ### 启动服务
 
 ```bash
-# 激活虚拟环境（如果尚未激活）
-source venv/bin/activate
-
 # 启动服务，扫描指定目录
-python -m backend.app.cli /path/to/your/docs
+deckview /path/to/your/docs
 
 # 扫描当前目录
-python -m backend.app.cli .
+deckview .
 
 # 指定端口
-python -m backend.app.cli /path/to/docs -p 8080
+deckview /path/to/docs -p 8080
 
-# 允许外部访问
-python -m backend.app.cli /path/to/docs --host 0.0.0.0
+# 允许外部访问（局域网）
+deckview /path/to/docs --host 0.0.0.0
+
+# 也支持模块方式启动
+python -m deckview /path/to/docs
 ```
 
 启动后访问：http://localhost:8000
@@ -60,7 +53,7 @@ python -m backend.app.cli /path/to/docs --host 0.0.0.0
 ### CLI参数
 
 ```
-用法: python -m backend.app.cli [目录] [选项]
+用法: deckview [目录] [选项]
 
 位置参数:
   directory             要扫描的文档目录（默认为当前目录）
@@ -74,9 +67,9 @@ python -m backend.app.cli /path/to/docs --host 0.0.0.0
   -h, --help            显示帮助
 
 示例:
-  python -m backend.app.cli ~/Documents
-  python -m backend.app.cli ./docs -p 8080
-  python -m backend.app.cli . --host 0.0.0.0 --no-watch
+  deckview ~/Documents
+  deckview ./docs -p 8080
+  deckview . --host 0.0.0.0 --no-watch
 ```
 
 ### 安装LibreOffice（用于PPT转换）
@@ -96,7 +89,8 @@ brew install libreoffice
 
 ```
 DeckView/
-├── backend/app/
+├── pyproject.toml        # 包配置
+├── src/deckview/         # Python 包
 │   ├── api/              # API路由
 │   │   └── library.py    # 目录树和文件访问API
 │   ├── core/config.py    # 配置管理
@@ -105,13 +99,12 @@ DeckView/
 │   │   ├── watcher.py    # 文件监听服务
 │   │   ├── conversion.py # PPT转PDF
 │   │   └── thumbnail.py  # 缩略图生成
+│   ├── web/              # 前端资源
+│   │   ├── templates/    # HTML模板
+│   │   └── static/       # CSS/JS
 │   ├── cli.py            # CLI入口
 │   └── main.py           # FastAPI入口
-├── frontend/
-│   ├── templates/        # HTML模板
-│   └── static/           # 静态资源
-├── data/                 # 缓存数据（自动生成）
-└── requirements.txt      # Python依赖
+└── README.md
 ```
 
 ## API接口
@@ -135,6 +128,7 @@ API文档：http://localhost:8000/api/docs
 |------|--------|------|
 | `HOST` | 127.0.0.1 | 监听地址 |
 | `PORT` | 8000 | 服务端口 |
+| `DECKVIEW_DATA_DIR` | ~/.deckview | 数据目录（缓存PDF和缩略图） |
 | `LIBREOFFICE_PATH` | soffice | LibreOffice路径 |
 | `CONVERSION_TIMEOUT` | 120 | 转换超时时间（秒） |
 
@@ -143,7 +137,7 @@ API文档：http://localhost:8000/api/docs
 - 默认只监听 `127.0.0.1`，仅本地访问
 - 使用 `--host 0.0.0.0` 允许外部访问时请注意安全
 - PPT转换依赖LibreOffice，首次转换可能较慢
-- 转换后的PDF和缩略图缓存在 `data/` 目录
+- 转换后的PDF和缩略图缓存在 `~/.deckview/` 目录
 
 ## 未来计划
 

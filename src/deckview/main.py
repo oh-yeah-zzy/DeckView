@@ -95,10 +95,10 @@ app.add_middleware(
 # 注册API路由
 app.include_router(library_router)
 
-# 设置静态文件和模板目录
-frontend_dir = Path(__file__).parent.parent.parent / "frontend"
-static_dir = frontend_dir / "static"
-templates_dir = frontend_dir / "templates"
+# 设置静态文件和模板目录（基于包内 web 目录）
+web_dir = Path(__file__).parent / "web"
+static_dir = web_dir / "static"
+templates_dir = web_dir / "templates"
 
 # 挂载静态文件目录
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
