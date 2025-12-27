@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档查看器 - DeckView</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/viewer.css">
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- marked.js for Markdown -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <!-- highlight.js for code highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- CodeMirror for Markdown editing -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+</head>
+<body class="viewer-body">
+    <!-- 顶部工具栏 -->
+    <header class="viewer-header">
+        <div class="header-left">
+            <a href="/" class="back-btn" title="返回首页">← 返回</a>
+            <span class="doc-title" id="docTitle">加载中...</span>
+        </div>
+        <div class="header-center">
+            <div class="page-controls" id="pageControls" style="display: none;">
+                <button class="btn-icon" id="prevPage" title="上一页">◀</button>
+                <span class="page-info">
+                    <input type="number" id="currentPage" min="1" value="1"> / <span id="totalPages">1</span>
+                </span>
+                <button class="btn-icon" id="nextPage" title="下一页">▶</button>
+            </div>
+        </div>
+        <div class="header-right">
+            <!-- 画笔工具栏 -->
+            <div class="pen-tools" id="penTools" style="display: none;">
+                <!-- 画笔按钮 -->
+                <button class="btn-icon" id="penToggle" title="画笔">✏️</button>
+                <!-- 画笔选项（画笔激活时显示） -->
+                <div class="pen-brush-options" id="penBrushOptions" style="display: none;">
+                    <div class="color-presets">
+                        <button class="color-btn active" data-color="#ff0000" style="background:#ff0000" title="红色"></button>
+                        <button class="color-btn" data-color="#ff6600" style="background:#ff6600" title="橙色"></button>
+                        <button class="color-btn" data-color="#ffcc00" style="background:#ffcc00" title="黄色"></button>
+                        <button class="color-btn" data-color="#00cc00" style="background:#00cc00" title="绿色"></button>
+                        <button class="color-btn" data-color="#0066ff" style="background:#0066ff" title="蓝色"></button>
+                        <button class="color-btn" data-color="#9900ff" style="background:#9900ff" title="紫色"></button>
+                        <button class="color-btn" data-color="#ffffff" style="background:#ffffff" title="白色"></button>
+                        <button class="color-btn" data-color="#000000" style="background:#000000" title="黑色"></button>
+                    </div>
+                    <input type="color" id="penColor" value="#ff0000" title="自定义颜色">
+                    <select id="penSize" title="画笔大小">
+                        <option value="2">细</option>
+                        <option value="4" selected>中</option>
+                        <option value="8">粗</option>
+                        <option value="16">特粗</option>
+                    </select>
+                </div>
+                <span class="tool-separator">|</span>
+                <!-- 橡皮擦按钮 -->
+                <button class="btn-icon" id="penEraser" title="橡皮擦">🧽</button>
+                <!-- 橡皮擦选项（橡皮擦激活时显示） -->
+                <div class="pen-eraser-options" id="penEraserOptions" style="display: none;">
+                    <select id="eraserSize" title="橡皮擦大小">
+                        <option value="10">小</option>
+                        <option value="20" selected>中</option>
+                        <option value="40">大</option>
+                        <option value="80">特大</option>
+                    </select>
+                </div>
+                <span class="tool-separator">|</span>
+                <!-- 清除和撤销 -->
+                <button class="btn-icon" id="penClear" title="清除全部">🗑️</button>
+                <button class="btn-icon" id="penUndo" title="撤销">↩️</button>
+            </div>
+            <div class="zoom-controls" id="zoomControls" style="display: none;">
+                <button class="btn-icon" id="zoomOut" title="缩小">−</button>
+                <span class="zoom-level" id="zoomLevel">100%</span>
+                <button class="btn-icon" id="zoomIn" title="放大">+</button>
+                <button class="btn-icon" id="fitPage" title="适合页面">⊡</button>
+                <button class="btn-icon" id="fitWidth" title="适合宽度">↔</button>
+            </div>
+            <button class="btn-icon" id="fullscreen" title="全屏">⛶</button>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <div class="viewer-main">
+        <!-- 侧边栏 - 缩略图 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span>页面导航</span>
+                <button class="btn-icon sidebar-toggle" id="sidebarToggle">◀</button>
+            </div>
+            <div class="thumbnail-list" id="thumbnailList"></div>
+        </aside>
+
+        <!-- 侧边栏展开按钮（侧边栏收起时显示） -->
+        <button class="sidebar-expand-btn" id="sidebarExpandBtn" title="展开页面导航">▶</button>
+
+        <!-- 查看器主区域 -->
+        <main class="viewer-content" id="viewerContent">
+            <!-- PDF查看器 -->
+            <div class="pdf-viewer" id="pdfViewer" style="display: none;">
+                <div class="pdf-container" id="pdfContainer">
+                    <canvas id="pdfCanvas"></canvas>
+                    <canvas id="drawingCanvas" class="drawing-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Markdown查看器 - 支持编辑模式 -->
+            <div class="markdown-viewer" id="markdownViewer" style="display: none;">
+                <!-- Markdown 工具栏 -->
+                <div class="md-toolbar" id="mdToolbar">
+                    <div class="md-toolbar-left">
+                        <button class="btn-icon md-btn" id="mdModeToggle" title="切换编辑模式">
+                            <span class="btn-text">编辑</span>
+                        </button>
+                    </div>
+                    <div class="md-toolbar-center">
+                        <span class="md-status" id="mdStatus"></span>
+                    </div>
+                    <div class="md-toolbar-right">
+                        <button class="btn-icon md-btn" id="mdSave" title="保存 (Ctrl+S)" style="display: none;">
+                            <span class="btn-text">💾 保存</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 分栏容器 -->
+                <div class="md-container">
+                    <!-- 编辑器面板 (默认隐藏) -->
+                    <div class="md-editor-pane" id="mdEditorPane" style="display: none;">
+                        <textarea id="mdEditor"></textarea>
+                    </div>
+
+                    <!-- 分隔线 (编辑模式显示) -->
+                    <div class="md-resizer" id="mdResizer" style="display: none;"></div>
+
+                    <!-- 预览面板 -->
+                    <div class="md-preview-pane" id="mdPreviewPane">
+                        <article class="markdown-body" id="markdownContent"></article>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加载状态 -->
+            <div class="viewer-loading" id="viewerLoading">
+                <div class="spinner"></div>
+                <p id="loadingText">正在加载文档...</p>
+            </div>
+
+            <!-- 错误状态 -->
+            <div class="viewer-error" id="viewerError" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <p id="errorText">加载失败</p>
+                <button class="btn" onclick="location.reload()">重试</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- 主题切换按钮 -->
+    <button class="theme-toggle" id="themeToggle" title="切换主题">🌗</button>
+
+    <!-- 文档ID存储（由模板渲染） -->
+    <script>
+        window.DOC_ID = "{{ doc_id }}";
+    </script>
+    <!-- 主题脚本（在其他脚本之前加载，避免闪烁） -->
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/viewer.js"></script>
+</body>
+</html>

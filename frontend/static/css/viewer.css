@@ -1,0 +1,674 @@
+/* 文档查看器样式 */
+
+/* 查看器页面布局 */
+.viewer-body {
+    background: var(--bg-color, #1a1a1a);
+    overflow: hidden;
+}
+
+/* 顶部工具栏 */
+.viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--preview-toolbar-bg, #2d2d2d);
+    color: var(--text-color, white);
+    height: 50px;
+    border-bottom: 1px solid var(--preview-border, #444);
+}
+
+.header-left,
+.header-center,
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.back-btn {
+    color: var(--text-color, white);
+    text-decoration: none;
+    padding: 5px 10px;
+    border-radius: var(--radius);
+    transition: background 0.2s;
+}
+
+.back-btn:hover {
+    background: rgba(128, 128, 128, 0.2);
+}
+
+.doc-title {
+    font-size: 1rem;
+    opacity: 0.9;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 页面控制 */
+.page-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-secondary);
+}
+
+.page-info input {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    text-align: center;
+}
+
+/* 缩放控制 */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zoom-level {
+    min-width: 50px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* 图标按钮 */
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: rgba(128, 128, 128, 0.2);
+    color: var(--text-color);
+}
+
+.btn-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 主内容区域 */
+.viewer-main {
+    display: flex;
+    height: calc(100vh - 50px);
+    position: relative;
+}
+
+/* 侧边栏展开按钮 */
+.sidebar-expand-btn {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 60px;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    background: var(--preview-toolbar-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    z-index: 20;
+    transition: background 0.2s, color 0.2s;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-expand-btn:hover {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+/* 侧边栏 */
+.sidebar {
+    width: 200px;
+    background: var(--preview-toolbar-bg);
+    border-right: 1px solid var(--preview-border);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 0;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--preview-border);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.sidebar-toggle {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+}
+
+/* 缩略图列表 */
+.thumbnail-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.thumbnail-item {
+    margin-bottom: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    transition: border-color 0.2s;
+}
+
+.thumbnail-item:hover {
+    border-color: var(--text-muted);
+}
+
+.thumbnail-item.active {
+    border-color: var(--primary-color);
+}
+
+.thumbnail-item img {
+    width: 100%;
+    display: block;
+    border-radius: 2px;
+}
+
+.thumbnail-page-num {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+/* 查看器内容区域 */
+.viewer-content {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    background: var(--bg-color);
+}
+
+/* PDF查看器 */
+.pdf-viewer {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.pdf-container {
+    position: relative;
+    display: inline-block;
+}
+
+.pdf-viewer canvas#pdfCanvas {
+    box-shadow: var(--shadow);
+    display: block;
+}
+
+/* Markdown查看器 */
+.markdown-viewer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
+.markdown-body {
+    background: var(--md-bg);
+    color: var(--text-color);
+    padding: 40px 60px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    min-height: 100%;
+}
+
+/* Markdown内容样式 */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.markdown-body h1 {
+    font-size: 2em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.3em;
+}
+
+.markdown-body h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.3em;
+}
+
+.markdown-body p {
+    margin-bottom: 16px;
+}
+
+.markdown-body code {
+    background: var(--md-code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+
+.markdown-body pre {
+    background: var(--md-code-bg);
+    padding: 16px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.markdown-body pre code {
+    background: none;
+    padding: 0;
+}
+
+.markdown-body blockquote {
+    padding: 0 1em;
+    color: var(--text-secondary);
+    border-left: 4px solid var(--md-blockquote-border);
+    margin: 0 0 16px 0;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+    padding-left: 2em;
+    margin-bottom: 16px;
+}
+
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.markdown-body th,
+.markdown-body td {
+    padding: 8px 12px;
+    border: 1px solid var(--md-table-border);
+}
+
+.markdown-body th {
+    background: var(--md-code-bg);
+    font-weight: 600;
+}
+
+.markdown-body img {
+    max-width: 100%;
+    height: auto;
+}
+
+.markdown-body a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.markdown-body a:hover {
+    text-decoration: underline;
+}
+
+/* 加载状态 */
+.viewer-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    gap: 20px;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 错误状态 */
+.viewer-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    gap: 15px;
+}
+
+.error-icon {
+    font-size: 4rem;
+}
+
+/* 全屏模式 */
+.fullscreen .viewer-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.fullscreen .viewer-header:hover {
+    opacity: 1;
+}
+
+.fullscreen .viewer-main {
+    height: 100vh;
+}
+
+.fullscreen .sidebar {
+    display: none;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 50px;
+        bottom: 0;
+        z-index: 50;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .doc-title {
+        max-width: 150px;
+    }
+
+    .markdown-body {
+        padding: 20px;
+    }
+
+    .zoom-controls {
+        display: none;
+    }
+}
+
+/* ========== 画笔工具样式 ========== */
+
+.pen-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pen-toggle.active,
+#penToggle.active {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.pen-brush-options,
+.pen-eraser-options {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.color-presets {
+    display: flex;
+    gap: 4px;
+}
+
+.color-btn {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.2s;
+    padding: 0;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+    border-color: var(--text-muted);
+}
+
+.color-btn.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 4px var(--primary-color);
+}
+
+.pen-options input[type="color"] {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+}
+
+.pen-options select {
+    height: 32px;
+    padding: 4px 8px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.tool-separator {
+    color: var(--text-muted);
+    margin: 0 4px;
+    user-select: none;
+}
+
+#penEraser.active {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.drawing-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.drawing-canvas.active {
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+/* ========== Markdown 编辑器样式 ========== */
+
+.md-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--preview-toolbar-bg);
+    border-bottom: 1px solid var(--preview-border);
+    min-height: 44px;
+    flex-shrink: 0;
+}
+
+.md-toolbar-left,
+.md-toolbar-center,
+.md-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.md-toolbar-center {
+    flex: 1;
+    justify-content: center;
+}
+
+.md-btn {
+    padding: 6px 12px;
+    min-width: auto;
+    width: auto;
+}
+
+.md-btn .btn-text {
+    font-size: 0.85rem;
+}
+
+.md-btn.active {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.md-status {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.md-status.unsaved { color: #ffc107; }
+.md-status.saving { color: #17a2b8; }
+.md-status.saved { color: #28a745; }
+.md-status.error { color: #dc3545; }
+
+.md-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.md-editor-pane {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    overflow: hidden;
+}
+
+.md-editor-pane > textarea {
+    position: absolute;
+    visibility: hidden;
+}
+
+.md-editor-pane .CodeMirror {
+    flex: 1;
+    height: auto !important;
+    min-height: 100%;
+    font-family: 'Consolas', 'Monaco', 'Menlo', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.md-resizer {
+    width: 4px;
+    background: var(--border-color);
+    cursor: col-resize;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.md-resizer:hover,
+.md-resizer.dragging {
+    background: var(--primary-color);
+}
+
+.md-preview-pane {
+    flex: 1;
+    min-width: 300px;
+    overflow: auto;
+    background: var(--bg-color);
+    padding: 20px;
+}
+
+.markdown-viewer.edit-mode .md-preview-pane .markdown-body {
+    max-width: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+}
+
+.markdown-viewer:not(.edit-mode) .md-preview-pane {
+    display: flex;
+    justify-content: center;
+}
+
+.markdown-viewer:not(.edit-mode) .md-preview-pane .markdown-body {
+    max-width: 900px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .md-container {
+        flex-direction: column;
+    }
+
+    .md-editor-pane,
+    .md-preview-pane {
+        min-width: 100%;
+        min-height: 40vh;
+    }
+
+    .md-resizer {
+        width: 100%;
+        height: 4px;
+        cursor: row-resize;
+    }
+}
