@@ -321,10 +321,27 @@ body {
 }
 
 .logo {
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.logo-title {
     font-size: 1.4rem;
     font-weight: 600;
-    margin-bottom: 8px;
     color: var(--sidebar-logo);
+    display: block;
+}
+
+.logo-author {
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--sidebar-text);
+    opacity: 0.5;
+    letter-spacing: 0.5px;
+    display: block;
 }
 
 .root-dir {
