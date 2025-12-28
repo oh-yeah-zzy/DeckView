@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     THUMBNAIL_WIDTH: int = 200
     THUMBNAIL_FORMAT: str = "png"
 
+    # ServiceAtlas 服务注册配置
+    REGISTRY_ENABLED: bool = True  # 是否启用服务注册
+    REGISTRY_URL: str = "http://127.0.0.1:9000"  # ServiceAtlas 注册中心地址
+    SERVICE_ID: str = "deckview"  # 服务唯一标识
+    HEARTBEAT_INTERVAL: int = 30  # 心跳间隔（秒）
+
     class Config:
         env_file = ".env"
         case_sensitive = True

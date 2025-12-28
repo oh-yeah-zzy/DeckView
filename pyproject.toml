@@ -41,6 +41,7 @@ dependencies = [
     "PyMuPDF>=1.23.0",
     "watchdog>=3.0.0",
     "python-dotenv>=1.0.0",
+    "httpx>=0.25.0",  # ServiceAtlas 服务注册客户端
 ]
 
 [project.optional-dependencies]

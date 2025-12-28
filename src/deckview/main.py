@@ -29,6 +29,23 @@ async def lifespan(app: FastAPI):
     # 启动时
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
 
+    # === ServiceAtlas 服务注册 ===
+    if settings.REGISTRY_ENABLED:
+        from .services.registry import init_registry
+        await init_registry(
+            registry_url=settings.REGISTRY_URL,
+            service_id=settings.SERVICE_ID,
+            service_name=f"{settings.APP_NAME} 文档预览服务",
+            host=settings.HOST,
+            port=settings.PORT,
+            health_check_path="/health",
+            metadata={
+                "version": settings.APP_VERSION,
+                "description": "在线预览 PPT、PDF、Word、Markdown 文件"
+            },
+            heartbeat_interval=settings.HEARTBEAT_INTERVAL,
+        )
+
     if settings.CONTENT_DIR:
         logger.info(f"Content directory: {settings.CONTENT_DIR}")
 
@@ -66,6 +83,12 @@ async def lifespan(app: FastAPI):
 
     # 关闭时
     logger.info("Shutting down...")
+
+    # === ServiceAtlas 服务注销 ===
+    if settings.REGISTRY_ENABLED:
+        from .services.registry import shutdown_registry
+        await shutdown_registry()
+
     from .services.watcher import watcher_service
     watcher_service.stop()
 
