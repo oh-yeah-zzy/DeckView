@@ -2,14 +2,16 @@
 
 # DeckView
 
-**轻量级 Web 文档查看器**
+**轻量级 Web 文档查看器 + Markdown 在线编辑**
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.0.0-orange)](https://github.com/your-repo/deckview)
 
-一个基于 Python 的本地文档服务器，支持在线预览 PPT、PDF、Word 和 Markdown 文件
+一个基于 Python 的本地文档服务器，支持在线预览 PPT、PDF、Word 和 Markdown 文件，并支持在线新建与编辑 Markdown。
+
+**可作为自部署笔记软件使用** — 将扫描目录当作你的个人笔记库或团队知识库
 
 </div>
 
@@ -24,8 +26,16 @@
 | **PPT/Word 预览** | 自动转换为 PDF 并在线预览 |
 | **PDF 预览** | 直接预览，支持缩放、翻页 |
 | **Markdown 渲染** | 支持 GFM 语法，代码高亮 |
+| **Markdown 编辑** | 在线新建、编辑 Markdown 文件，实时预览 |
+| **文件上传** | 支持上传文档和附件到当前目录 |
 | **实时监听** | 文件变化时自动刷新目录树 |
 | **缩略图导航** | PDF/PPT 自动生成页面缩略图 |
+
+## 使用场景
+
+- **个人笔记** — 在本地或服务器部署，随时通过浏览器记录和查阅笔记
+- **团队知识库** — 局域网部署，团队成员共享文档和协作编辑
+- **文档资料库** — 集中管理 PDF、PPT、Word、Markdown 等多种格式的资料
 
 ## 快速开始
 
@@ -162,8 +172,11 @@ DeckView/
 
 - 默认只监听 `127.0.0.1`，仅本地访问
 - 使用 `--host 0.0.0.0` 允许外部访问时请注意安全
+- **作为笔记软件使用时**：建议仅在内网部署，或配合反向代理添加认证
+- 确保扫描目录具有写权限，以支持新建和编辑功能
 - PPT/Word 转换依赖 LibreOffice，首次转换可能较慢
 - 转换后的 PDF 和缩略图缓存在 `~/.deckview/` 目录
+- 建议定期备份笔记目录中的重要文件
 
 ## 未来计划
 
