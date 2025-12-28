@@ -12,12 +12,39 @@ const API_BASE = '/api/library';
 // DOM元素引用 - 侧边栏
 const fileTree = document.getElementById('fileTree');
 const searchInput = document.getElementById('searchInput');
+const uploadBtn = document.getElementById('uploadBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const expandAllBtn = document.getElementById('expandAllBtn');
 const collapseAllBtn = document.getElementById('collapseAllBtn');
 const sidebarFooter = document.getElementById('sidebarFooter');
 const connectionStatus = document.getElementById('connectionStatus');
 const toast = document.getElementById('toast');
+
+// DOM元素引用 - 上传模态框
+const uploadModal = document.getElementById('uploadModal');
+const uploadModalClose = document.getElementById('uploadModalClose');
+const uploadDropzone = document.getElementById('uploadDropzone');
+const uploadFileInput = document.getElementById('uploadFileInput');
+const uploadFilePreview = document.getElementById('uploadFilePreview');
+const uploadFileIcon = document.getElementById('uploadFileIcon');
+const uploadFileName = document.getElementById('uploadFileName');
+const uploadRemoveFile = document.getElementById('uploadRemoveFile');
+const uploadDirTree = document.getElementById('uploadDirTree');
+const uploadSelectedPathValue = document.getElementById('uploadSelectedPathValue');
+const uploadProgress = document.getElementById('uploadProgress');
+const uploadProgressFill = document.getElementById('uploadProgressFill');
+const uploadProgressText = document.getElementById('uploadProgressText');
+const uploadCancelBtn = document.getElementById('uploadCancelBtn');
+const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
+
+// DOM元素引用 - 新建文件模态框
+const newFileBtn = document.getElementById('newFileBtn');
+const createModal = document.getElementById('createModal');
+const createModalClose = document.getElementById('createModalClose');
+const createFilename = document.getElementById('createFilename');
+const createTargetPath = document.getElementById('createTargetPath');
+const createCancelBtn = document.getElementById('createCancelBtn');
+const createSubmitBtn = document.getElementById('createSubmitBtn');
 
 // DOM元素引用 - 预览面板
 const welcomePage = document.getElementById('welcomePage');
@@ -201,6 +228,10 @@ function createTreeNode(node, level) {
             <span class="tree-name">${escapeHtml(node.name)}</span>
         `;
         item.addEventListener('click', (e) => {
+            // 设置目录为选中状态
+            document.querySelectorAll('.tree-item.active').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+            // 展开/折叠目录
             toggleDirectory(item, wrapper);
             e.stopPropagation();
         });
@@ -1031,6 +1062,625 @@ function bindEvents() {
             window.resizeTimer = setTimeout(() => { fitToPage(); }, 200);
         }
     });
+
+    // 上传功能事件绑定
+    bindUploadEvents();
+
+    // 新建文件功能事件绑定
+    bindCreateEvents();
+}
+
+// ============ 上传功能 ============
+
+// 上传状态
+let selectedFile = null;
+let isUploading = false;
+let selectedTargetDir = '';  // 选中的目标目录
+
+// 允许的文件扩展名
+const ALLOWED_EXTENSIONS = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'md', 'markdown'];
+
+/**
+ * 打开上传模态框
+ */
+function openUploadModal() {
+    // 重置状态
+    resetUploadState();
+    // 渲染目录树
+    renderUploadDirTree();
+    // 显示模态框
+    uploadModal.style.display = 'flex';
+}
+
+/**
+ * 关闭上传模态框
+ */
+function closeUploadModal() {
+    if (isUploading) {
+        if (!confirm('正在上传中，确定要取消吗？')) {
+            return;
+        }
+    }
+    uploadModal.style.display = 'none';
+    resetUploadState();
+}
+
+/**
+ * 重置上传状态
+ */
+function resetUploadState() {
+    selectedFile = null;
+    isUploading = false;
+    selectedTargetDir = '';
+    uploadFileInput.value = '';
+    uploadDropzone.style.display = 'block';
+    uploadFilePreview.style.display = 'none';
+    uploadProgress.style.display = 'none';
+    uploadProgressFill.style.width = '0%';
+    uploadProgressText.textContent = '0%';
+    uploadSubmitBtn.disabled = true;
+    if (uploadSelectedPathValue) {
+        uploadSelectedPathValue.textContent = '根目录';
+    }
+}
+
+/**
+ * 从目录树数据递归提取目录结构（包含文件）
+ */
+function extractDirStructure(node, path = '') {
+    const result = { name: node.name, path: path, type: 'dir', children: [], files: [] };
+    if (node && node.children) {
+        for (const child of node.children) {
+            if (child.type === 'dir') {
+                const childPath = path ? `${path}/${child.name}` : child.name;
+                result.children.push(extractDirStructure(child, childPath));
+            } else if (child.type === 'file') {
+                // 记录文件信息
+                result.files.push({
+                    name: child.name,
+                    doc_type: child.doc_type
+                });
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * 获取文件图标
+ */
+function getFileTypeIcon(docType) {
+    const icons = {
+        'pdf': '📄',
+        'pptx': '📊',
+        'docx': '📃',
+        'markdown': '📝'
+    };
+    return icons[docType] || '📄';
+}
+
+/**
+ * 渲染目录树节点
+ */
+function renderDirNode(dir, isRoot = false) {
+    const hasChildren = (dir.children && dir.children.length > 0) || (dir.files && dir.files.length > 0);
+    const isSelected = selectedTargetDir === dir.path;
+
+    let html = `<div class="upload-dir-node">`;
+    html += `<div class="upload-dir-item ${isSelected ? 'selected' : ''}" data-path="${dir.path}">`;
+
+    // 展开/折叠按钮
+    if (hasChildren) {
+        html += `<span class="dir-toggle">▶</span>`;
+    } else {
+        html += `<span class="dir-toggle" style="visibility:hidden">▶</span>`;
+    }
+
+    // 图标
+    html += `<span class="dir-icon">${isRoot ? '🏠' : (dir.children && dir.children.length > 0 ? '📂' : '📁')}</span>`;
+
+    // 名称
+    html += `<span class="dir-name">${isRoot ? '根目录' : dir.name}</span>`;
+
+    // 选中标记
+    if (isSelected) {
+        html += `<span class="dir-check">✓</span>`;
+    }
+
+    html += `</div>`;
+
+    // 子内容（子目录 + 文件）
+    if (hasChildren) {
+        html += `<div class="upload-dir-children" style="display: none;">`;
+
+        // 先渲染子目录
+        if (dir.children) {
+            for (const child of dir.children) {
+                html += renderDirNode(child, false);
+            }
+        }
+
+        // 再渲染文件（只读展示）
+        if (dir.files && dir.files.length > 0) {
+            for (const file of dir.files) {
+                html += `<div class="upload-file-item">`;
+                html += `<span class="file-icon">${getFileTypeIcon(file.doc_type)}</span>`;
+                html += `<span class="file-name">${file.name}</span>`;
+                html += `</div>`;
+            }
+        }
+
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+/**
+ * 渲染上传目录树
+ */
+function renderUploadDirTree() {
+    if (!uploadDirTree) return;
+
+    // 构建目录结构（包含根目录文件）
+    const dirStructure = { name: '根目录', path: '', children: [], files: [] };
+
+    if (treeData && treeData.children) {
+        for (const child of treeData.children) {
+            if (child.type === 'dir') {
+                dirStructure.children.push(extractDirStructure(child, child.name));
+            } else if (child.type === 'file') {
+                dirStructure.files.push({
+                    name: child.name,
+                    doc_type: child.doc_type
+                });
+            }
+        }
+    }
+
+    // 渲染HTML
+    uploadDirTree.innerHTML = renderDirNode(dirStructure, true);
+
+    // 绑定点击事件
+    bindDirTreeEvents();
+
+    // 更新选中路径显示
+    updateSelectedPathDisplay();
+}
+
+/**
+ * 更新选中路径显示
+ */
+function updateSelectedPathDisplay() {
+    if (uploadSelectedPathValue) {
+        uploadSelectedPathValue.textContent = selectedTargetDir || '根目录';
+    }
+}
+
+/**
+ * 绑定目录树事件
+ */
+function bindDirTreeEvents() {
+    if (!uploadDirTree) return;
+
+    uploadDirTree.querySelectorAll('.upload-dir-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const target = e.target;
+            const node = item.parentElement;
+            const toggle = item.querySelector('.dir-toggle');
+            const children = node.querySelector('.upload-dir-children');
+
+            // 点击展开按钮
+            if (target.classList.contains('dir-toggle')) {
+                e.stopPropagation();
+                if (children) {
+                    const isExpanded = children.style.display !== 'none';
+                    children.style.display = isExpanded ? 'none' : 'block';
+                    target.textContent = isExpanded ? '▶' : '▼';
+                    target.classList.toggle('expanded', !isExpanded);
+                }
+                return;
+            }
+
+            const isAlreadySelected = item.classList.contains('selected');
+
+            // 如果点击的是已选中的目录，切换展开/折叠
+            if (isAlreadySelected && children) {
+                const isExpanded = children.style.display !== 'none';
+                children.style.display = isExpanded ? 'none' : 'block';
+                if (toggle) {
+                    toggle.textContent = isExpanded ? '▶' : '▼';
+                    toggle.classList.toggle('expanded', !isExpanded);
+                }
+                return;
+            }
+
+            // 选择新目录
+            uploadDirTree.querySelectorAll('.upload-dir-item').forEach(i => {
+                i.classList.remove('selected');
+                const check = i.querySelector('.dir-check');
+                if (check) check.remove();
+            });
+
+            item.classList.add('selected');
+            selectedTargetDir = item.dataset.path;
+
+            // 添加选中标记
+            const check = document.createElement('span');
+            check.className = 'dir-check';
+            check.textContent = '✓';
+            item.appendChild(check);
+
+            // 更新路径显示
+            updateSelectedPathDisplay();
+
+            // 首次选中时自动展开子目录
+            if (toggle && children && children.style.display === 'none') {
+                children.style.display = 'block';
+                toggle.textContent = '▼';
+                toggle.classList.add('expanded');
+            }
+        });
+    });
+}
+
+/**
+ * 验证文件扩展名
+ */
+function validateUploadFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        showToast(`不支持的文件类型：.${ext}`, 'error');
+        return false;
+    }
+    return true;
+}
+
+/**
+ * 获取上传文件图标
+ */
+function getUploadFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📄',
+        'ppt': '📊', 'pptx': '📊',
+        'doc': '📃', 'docx': '📃',
+        'md': '📝', 'markdown': '📝'
+    };
+    return icons[ext] || '📁';
+}
+
+/**
+ * 选择文件
+ */
+function selectUploadFile(file) {
+    if (!validateUploadFile(file)) {
+        return;
+    }
+
+    selectedFile = file;
+    uploadDropzone.style.display = 'none';
+    uploadFilePreview.style.display = 'flex';
+    uploadFileIcon.textContent = getUploadFileIcon(file.name);
+    uploadFileName.textContent = file.name;
+    uploadSubmitBtn.disabled = false;
+}
+
+/**
+ * 移除已选文件
+ */
+function removeSelectedFile() {
+    resetUploadState();
+}
+
+/**
+ * 执行上传
+ */
+async function performUpload() {
+    if (!selectedFile || isUploading) return;
+
+    isUploading = true;
+    uploadSubmitBtn.disabled = true;
+    uploadProgress.style.display = 'flex';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('target_dir', selectedTargetDir);
+
+    try {
+        const xhr = new XMLHttpRequest();
+
+        // 进度监听
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                uploadProgressFill.style.width = percent + '%';
+                uploadProgressText.textContent = percent + '%';
+            }
+        });
+
+        // 完成处理
+        const result = await new Promise((resolve, reject) => {
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(JSON.parse(xhr.responseText));
+                } else {
+                    try {
+                        const error = JSON.parse(xhr.responseText);
+                        reject(new Error(error.detail || '上传失败'));
+                    } catch {
+                        reject(new Error('上传失败'));
+                    }
+                }
+            };
+            xhr.onerror = () => reject(new Error('网络错误'));
+
+            xhr.open('POST', `${API_BASE}/upload`);
+            xhr.send(formData);
+        });
+
+        // 成功 - 先重置上传状态，避免关闭模态框时弹出确认框
+        isUploading = false;
+        const message = result.file.renamed
+            ? `上传成功，文件已重命名为：${result.file.name}`
+            : '上传成功';
+        showToast(message, 'success');
+
+        // 关闭模态框并刷新目录树
+        closeUploadModal();
+        await loadTree(true);
+
+    } catch (error) {
+        showToast(error.message, 'error');
+        isUploading = false;
+        uploadSubmitBtn.disabled = false;
+    }
+}
+
+/**
+ * 绑定上传相关事件
+ */
+function bindUploadEvents() {
+    // 检查DOM元素是否存在
+    if (!uploadBtn || !uploadModal) {
+        console.warn('上传功能DOM元素未找到');
+        return;
+    }
+
+    // 打开模态框
+    uploadBtn.addEventListener('click', openUploadModal);
+
+    // 关闭模态框
+    uploadModalClose.addEventListener('click', closeUploadModal);
+    uploadCancelBtn.addEventListener('click', closeUploadModal);
+
+    // 点击背景关闭
+    uploadModal.addEventListener('click', (e) => {
+        if (e.target === uploadModal) closeUploadModal();
+    });
+
+    // ESC 关闭
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && uploadModal.style.display === 'flex') {
+            closeUploadModal();
+        }
+    });
+
+    // 点击拖放区域选择文件
+    uploadDropzone.addEventListener('click', () => uploadFileInput.click());
+
+    // 文件选择
+    uploadFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            selectUploadFile(e.target.files[0]);
+        }
+    });
+
+    // 拖放处理
+    uploadDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadDropzone.classList.add('dragover');
+    });
+
+    uploadDropzone.addEventListener('dragleave', () => {
+        uploadDropzone.classList.remove('dragover');
+    });
+
+    uploadDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadDropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            selectUploadFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // 移除已选文件
+    uploadRemoveFile.addEventListener('click', removeSelectedFile);
+
+    // 上传按钮
+    uploadSubmitBtn.addEventListener('click', performUpload);
+}
+
+// ============ 新建文件功能 ============
+
+// 新建文件状态
+let isCreating = false;
+let createTargetDir = '';  // 新建文件的目标目录
+
+/**
+ * 获取左侧目录树当前选中的目录路径
+ * - 如果选中的是文件，返回文件所在目录
+ * - 如果选中的是目录，返回该目录
+ * - 如果没有选中，返回根目录
+ */
+function getCurrentSelectedDir() {
+    // 查找当前选中的文件
+    const selectedFile = fileTree.querySelector('.tree-item.active');
+    if (selectedFile) {
+        const path = selectedFile.dataset.path || '';
+        // 如果是文件，获取其父目录
+        if (selectedFile.dataset.fileId) {
+            const lastSlash = path.lastIndexOf('/');
+            return lastSlash > 0 ? path.substring(0, lastSlash) : '';
+        }
+        // 如果是目录，直接返回
+        return path;
+    }
+    // 没有选中任何内容，返回根目录
+    return '';
+}
+
+/**
+ * 打开新建文件模态框
+ */
+function openCreateModal() {
+    // 获取当前选中的目录
+    createTargetDir = getCurrentSelectedDir();
+
+    // 更新显示
+    if (createTargetPath) {
+        createTargetPath.textContent = createTargetDir || '根目录';
+    }
+
+    // 重置状态
+    isCreating = false;
+    createFilename.value = '';
+    createSubmitBtn.disabled = true;
+
+    // 显示模态框
+    createModal.style.display = 'flex';
+
+    // 聚焦到文件名输入框
+    setTimeout(() => createFilename.focus(), 100);
+}
+
+/**
+ * 关闭新建文件模态框
+ */
+function closeCreateModal() {
+    if (isCreating) {
+        if (!confirm('正在创建中，确定要取消吗？')) {
+            return;
+        }
+    }
+    createModal.style.display = 'none';
+    isCreating = false;
+}
+
+/**
+ * 更新创建按钮状态
+ */
+function updateCreateButton() {
+    const filename = createFilename.value.trim();
+    createSubmitBtn.disabled = !filename || isCreating;
+}
+
+/**
+ * 执行创建文件
+ */
+async function performCreate() {
+    const filename = createFilename.value.trim();
+    if (!filename || isCreating) return;
+
+    isCreating = true;
+    createSubmitBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('filename', filename);
+    formData.append('target_dir', createTargetDir);
+
+    try {
+        const response = await fetch(`${API_BASE}/create`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || '创建失败');
+        }
+
+        // 成功
+        isCreating = false;
+        const message = result.file.renamed
+            ? `创建成功，文件已重命名为：${result.file.name}`
+            : '创建成功';
+        showToast(message, 'success');
+
+        // 关闭模态框
+        closeCreateModal();
+
+        // 刷新目录树
+        await loadTree(true);
+
+        // 选中并打开新文件
+        setTimeout(() => {
+            selectFileById(result.file.id);
+        }, 100);
+
+    } catch (error) {
+        showToast(error.message, 'error');
+        isCreating = false;
+        createSubmitBtn.disabled = false;
+    }
+}
+
+/**
+ * 根据文件ID选中并打开文件
+ */
+function selectFileById(fileId) {
+    // 在目录树中找到文件并点击
+    const fileItem = fileTree.querySelector(`.tree-item[data-file-id="${fileId}"]`);
+    if (fileItem) {
+        fileItem.click();
+        // 滚动到可见位置
+        fileItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+/**
+ * 绑定新建相关事件
+ */
+function bindCreateEvents() {
+    // 检查DOM元素是否存在
+    if (!newFileBtn || !createModal) {
+        console.warn('新建文件功能DOM元素未找到');
+        return;
+    }
+
+    // 打开模态框
+    newFileBtn.addEventListener('click', openCreateModal);
+
+    // 关闭模态框
+    createModalClose.addEventListener('click', closeCreateModal);
+    createCancelBtn.addEventListener('click', closeCreateModal);
+
+    // 点击背景关闭
+    createModal.addEventListener('click', (e) => {
+        if (e.target === createModal) closeCreateModal();
+    });
+
+    // ESC 关闭
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && createModal.style.display === 'flex') {
+            closeCreateModal();
+        }
+    });
+
+    // 文件名输入监听
+    createFilename.addEventListener('input', updateCreateButton);
+
+    // Enter 键提交
+    createFilename.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !createSubmitBtn.disabled) {
+            performCreate();
+        }
+    });
+
+    // 创建按钮
+    createSubmitBtn.addEventListener('click', performCreate);
 }
 
 // ============ 初始化 ============

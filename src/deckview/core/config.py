@@ -17,6 +17,13 @@ def get_default_data_dir() -> Path:
     return Path.home() / ".deckview"
 
 
+def get_content_dir() -> Optional[Path]:
+    """从环境变量获取内容目录"""
+    if env_content_dir := os.environ.get("DECKVIEW_CONTENT_DIR"):
+        return Path(env_content_dir)
+    return None
+
+
 class Settings(BaseSettings):
     """应用配置类"""
 
@@ -30,7 +37,8 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # 内容目录（核心配置：指定要扫描的文档目录）
-    CONTENT_DIR: Optional[Path] = None
+    # 通过环境变量 DECKVIEW_CONTENT_DIR 设置，支持 --reload 模式
+    CONTENT_DIR: Optional[Path] = get_content_dir()
 
     # 数据目录配置（默认使用用户主目录下的 .deckview）
     DATA_DIR: Path = get_default_data_dir()
@@ -70,6 +78,8 @@ settings = Settings()
 def set_content_dir(path: Path):
     """设置内容目录（由CLI调用）"""
     global settings
+    # 同时设置环境变量，确保 --reload 模式下也能正确读取
+    os.environ["DECKVIEW_CONTENT_DIR"] = str(path.resolve())
     settings.CONTENT_DIR = path.resolve()
 
 

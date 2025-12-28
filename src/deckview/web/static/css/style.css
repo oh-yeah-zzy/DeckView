@@ -1138,3 +1138,399 @@ body {
 .preview-error .error-icon {
     font-size: 3rem;
 }
+
+/* ============ 模态框基础样式 ============ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.modal-close {
+    width: 28px;
+    height: 28px;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* ============ 上传模态框样式 ============ */
+.upload-modal {
+    width: 450px;
+}
+
+/* 拖放区域 */
+.upload-dropzone {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+    border-color: var(--primary-color);
+    background: rgba(74, 144, 217, 0.05);
+}
+
+.dropzone-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+}
+
+.dropzone-text {
+    color: var(--text-color);
+    margin-bottom: 8px;
+}
+
+.dropzone-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* 已选文件预览 */
+.upload-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--sidebar-hover);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+}
+
+.upload-file-preview .file-icon {
+    font-size: 1.5rem;
+}
+
+.upload-file-preview .file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-color);
+}
+
+.upload-file-preview .remove-file {
+    color: var(--danger-color);
+}
+
+/* 目标目录选择 */
+.upload-target {
+    margin-top: 16px;
+}
+
+.upload-target > label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.upload-dir-tree {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius);
+    background: var(--input-bg);
+    padding: 8px 4px;
+}
+
+/* 目录节点容器 */
+.upload-dir-node {
+    user-select: none;
+}
+
+/* 目录项 */
+.upload-dir-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    margin: 2px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    border: 2px solid transparent;
+}
+
+.upload-dir-item:hover {
+    background: var(--sidebar-hover);
+}
+
+.upload-dir-item.selected {
+    background: rgba(74, 144, 217, 0.15);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.upload-dir-item .dir-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    border-radius: 3px;
+    transition: all 0.15s;
+}
+
+.upload-dir-item .dir-toggle:hover {
+    background: var(--sidebar-active);
+}
+
+.upload-dir-item .dir-toggle.expanded {
+    transform: rotate(90deg);
+}
+
+.upload-dir-item .dir-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+}
+
+.upload-dir-item .dir-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.upload-dir-item .dir-check {
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-left: auto;
+}
+
+/* 子目录容器 - 缩进 */
+.upload-dir-children {
+    margin-left: 22px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-color);
+}
+
+/* 文件项（只读参考） */
+.upload-file-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    margin: 1px 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    cursor: default;
+    user-select: none;
+}
+
+.upload-file-item .file-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.upload-file-item .file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 当前选中路径显示 */
+.upload-selected-path {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--sidebar-hover);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.upload-selected-path .path-label {
+    color: var(--text-muted);
+}
+
+.upload-selected-path .path-value {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* 上传进度 */
+.upload-progress {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    min-width: 40px;
+}
+
+/* ============ 新建文件模态框样式 ============ */
+.create-modal {
+    width: 400px;
+}
+
+.create-target-dir {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: var(--sidebar-hover);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+}
+
+.target-label {
+    color: var(--text-muted);
+}
+
+.target-path {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.create-filename-group {
+    margin-bottom: 16px;
+}
+
+.create-filename-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.filename-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.filename-input-wrapper:focus-within {
+    border-color: var(--primary-color);
+}
+
+.filename-input-wrapper input {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.filename-suffix {
+    padding: 10px 12px;
+    background: var(--sidebar-hover);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    border-left: 1px solid var(--border-color);
+}
+
+/* 按钮样式 */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: var(--sidebar-hover);
+    color: var(--text-color);
+}
+
+.btn-secondary:hover {
+    background: var(--sidebar-active);
+}

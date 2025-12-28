@@ -38,6 +38,8 @@
 
             <!-- 工具栏 -->
             <div class="toolbar">
+                <button class="btn-icon" id="uploadBtn" title="上传文件">📤</button>
+                <button class="btn-icon" id="newFileBtn" title="新建文件">📝</button>
                 <button class="btn-icon" id="refreshBtn" title="刷新">🔄</button>
                 <button class="btn-icon" id="expandAllBtn" title="全部展开">📂</button>
                 <button class="btn-icon" id="collapseAllBtn" title="全部折叠">📁</button>
@@ -193,6 +195,88 @@
 
     <!-- 消息提示 -->
     <div class="toast" id="toast"></div>
+
+    <!-- 上传模态框 -->
+    <div class="modal-overlay" id="uploadModal" style="display: none;">
+        <div class="modal-content upload-modal">
+            <div class="modal-header">
+                <h3>上传文件</h3>
+                <button class="btn-icon modal-close" id="uploadModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 文件拖放区域 -->
+                <div class="upload-dropzone" id="uploadDropzone">
+                    <div class="dropzone-icon">📁</div>
+                    <p class="dropzone-text">拖放文件到此处，或点击选择文件</p>
+                    <p class="dropzone-hint">支持：PDF, PPT/PPTX, Word, Markdown</p>
+                    <input type="file" id="uploadFileInput"
+                           accept=".pdf,.ppt,.pptx,.doc,.docx,.md,.markdown"
+                           style="display: none;">
+                </div>
+
+                <!-- 已选文件预览 -->
+                <div class="upload-file-preview" id="uploadFilePreview" style="display: none;">
+                    <span class="file-icon" id="uploadFileIcon">📄</span>
+                    <span class="file-name" id="uploadFileName"></span>
+                    <button class="btn-icon remove-file" id="uploadRemoveFile" title="移除">&times;</button>
+                </div>
+
+                <!-- 目标目录选择 -->
+                <div class="upload-target">
+                    <label>上传到目录：</label>
+                    <div class="upload-dir-tree" id="uploadDirTree">
+                        <!-- 目录树将由JavaScript渲染 -->
+                    </div>
+                    <div class="upload-selected-path" id="uploadSelectedPath">
+                        <span class="path-label">已选择:</span>
+                        <span class="path-value" id="uploadSelectedPathValue">根目录</span>
+                    </div>
+                </div>
+
+                <!-- 上传进度 -->
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="uploadProgressFill"></div>
+                    </div>
+                    <span class="progress-text" id="uploadProgressText">0%</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="uploadCancelBtn">取消</button>
+                <button class="btn btn-primary" id="uploadSubmitBtn" disabled>上传</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建文件模态框 -->
+    <div class="modal-overlay" id="createModal" style="display: none;">
+        <div class="modal-content create-modal">
+            <div class="modal-header">
+                <h3>新建 Markdown 文件</h3>
+                <button class="btn-icon modal-close" id="createModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 目标目录显示 -->
+                <div class="create-target-dir">
+                    <span class="target-label">创建位置：</span>
+                    <span class="target-path" id="createTargetPath">根目录</span>
+                </div>
+
+                <!-- 文件名输入 -->
+                <div class="create-filename-group">
+                    <label for="createFilename">文件名</label>
+                    <div class="filename-input-wrapper">
+                        <input type="text" id="createFilename" placeholder="输入文件名" autocomplete="off">
+                        <span class="filename-suffix">.md</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="createCancelBtn">取消</button>
+                <button class="btn btn-primary" id="createSubmitBtn" disabled>创建</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 主题脚本（在其他脚本之前加载，避免闪烁） -->
     <script src="/static/js/theme.js"></script>

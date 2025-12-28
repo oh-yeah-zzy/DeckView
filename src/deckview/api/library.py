@@ -3,9 +3,12 @@
 处理目录树、文件访问等请求
 """
 import asyncio
+import re
+import hashlib
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query, Request
+import aiofiles
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from ..core.config import settings
@@ -264,6 +267,290 @@ async def update_file_content(file_id: str, request: Request):
         raise HTTPException(status_code=403, detail="没有写入权限")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"保存失败: {str(e)}")
+
+
+def _validate_file_extension(filename: str) -> str:
+    """
+    验证文件扩展名是否允许
+
+    Args:
+        filename: 文件名
+
+    Returns:
+        扩展名（不含点）
+
+    Raises:
+        HTTPException: 如果扩展名不允许
+    """
+    ext = Path(filename).suffix.lower().lstrip('.')
+    if ext not in settings.ALLOWED_EXTENSIONS:
+        allowed = ", ".join(sorted(settings.ALLOWED_EXTENSIONS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的文件类型 '.{ext}'。支持的类型：{allowed}"
+        )
+    return ext
+
+
+def _validate_target_dir(target_dir: str) -> Path:
+    """
+    验证目标目录安全性
+
+    - 禁止 .. 路径遍历
+    - 禁止绝对路径
+    - 确保目标在 CONTENT_DIR 内
+
+    Args:
+        target_dir: 目标目录的相对路径
+
+    Returns:
+        验证后的完整路径
+
+    Raises:
+        HTTPException: 如果路径不安全或目录不存在
+    """
+    content_dir = settings.CONTENT_DIR
+
+    # 清理和规范化路径
+    target_dir = target_dir.strip().strip('/')
+
+    # 检查危险模式
+    if '..' in target_dir or target_dir.startswith('/'):
+        raise HTTPException(status_code=400, detail="非法的目录路径")
+
+    # 构建完整路径并验证
+    if target_dir:
+        full_path = (content_dir / target_dir).resolve()
+    else:
+        full_path = content_dir.resolve()
+
+    # 确保在 CONTENT_DIR 内（防止符号链接逃逸）
+    try:
+        full_path.relative_to(content_dir.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="目标目录不在允许范围内")
+
+    # 检查目录是否存在
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="目标目录不存在")
+
+    if not full_path.is_dir():
+        raise HTTPException(status_code=400, detail="目标路径不是目录")
+
+    return full_path
+
+
+def _get_unique_filename(directory: Path, filename: str) -> str:
+    """
+    获取唯一的文件名
+
+    如果文件已存在，添加数字后缀：file(1).pdf, file(2).pdf...
+
+    Args:
+        directory: 目标目录
+        filename: 原始文件名
+
+    Returns:
+        唯一的文件名
+    """
+    target_path = directory / filename
+    if not target_path.exists():
+        return filename
+
+    # 分离文件名和扩展名
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
+
+    # 检查是否已有数字后缀，如 file(1)
+    match = re.match(r'^(.+)\((\d+)\)$', stem)
+    if match:
+        base_name = match.group(1)
+        start_num = int(match.group(2)) + 1
+    else:
+        base_name = stem
+        start_num = 1
+
+    # 循环查找可用的文件名
+    counter = start_num
+    while counter < 1000:  # 防止无限循环
+        new_filename = f"{base_name}({counter}){suffix}"
+        if not (directory / new_filename).exists():
+            return new_filename
+        counter += 1
+
+    raise HTTPException(status_code=500, detail="无法生成唯一文件名")
+
+
+def _generate_file_id(rel_path: str) -> str:
+    """根据相对路径生成文件ID"""
+    return hashlib.sha256(rel_path.encode('utf-8')).hexdigest()[:16]
+
+
+@router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(..., description="要上传的文件"),
+    target_dir: str = Form("", description="目标目录（相对路径，默认为根目录）")
+):
+    """
+    上传文件到指定目录
+
+    - 仅支持文档类型：.pdf, .pptx, .ppt, .docx, .doc, .md, .markdown
+    - 文件名冲突时自动重命名（添加数字后缀）
+    - 返回上传结果和新文件信息
+    """
+    # 1. 验证内容目录已配置
+    if not settings.CONTENT_DIR:
+        raise HTTPException(status_code=500, detail="内容目录未配置")
+
+    # 2. 验证文件名存在
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="文件名不能为空")
+
+    # 3. 验证文件扩展名
+    _validate_file_extension(file.filename)
+
+    # 4. 验证目标目录
+    target_path = _validate_target_dir(target_dir)
+
+    # 5. 获取唯一文件名
+    safe_filename = _get_unique_filename(target_path, file.filename)
+
+    # 6. 保存文件
+    file_path = target_path / safe_filename
+    try:
+        async with aiofiles.open(file_path, 'wb') as f:
+            # 分块读取，避免大文件内存溢出（1MB chunks）
+            while chunk := await file.read(1024 * 1024):
+                await f.write(chunk)
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="没有写入权限")
+    except Exception as e:
+        # 清理可能创建的不完整文件
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"保存文件失败: {str(e)}")
+
+    # 7. 触发目录刷新
+    library_service.invalidate_cache()
+
+    # 8. 获取新文件信息
+    rel_path = file_path.relative_to(settings.CONTENT_DIR)
+    file_id = _generate_file_id(str(rel_path))
+
+    return {
+        "status": "success",
+        "message": "文件上传成功",
+        "file": {
+            "id": file_id,
+            "name": safe_filename,
+            "path": str(rel_path),
+            "original_name": file.filename,
+            "renamed": safe_filename != file.filename
+        }
+    }
+
+
+def _validate_filename(filename: str) -> str:
+    """
+    验证并清理文件名
+
+    - 去除首尾空格
+    - 检查是否为空
+    - 检查是否包含非法字符
+    - 返回清理后的文件名（不含扩展名）
+    """
+    # 去除首尾空格
+    filename = filename.strip()
+
+    # 检查是否为空
+    if not filename:
+        raise HTTPException(status_code=400, detail="文件名不能为空")
+
+    # 非法字符列表
+    invalid_chars = '/\\:*?"<>|'
+    for char in invalid_chars:
+        if char in filename:
+            raise HTTPException(
+                status_code=400,
+                detail=f"文件名不能包含以下字符: {invalid_chars}"
+            )
+
+    # 如果用户输入了 .md 扩展名，去掉它（后面会统一添加）
+    if filename.lower().endswith('.md'):
+        filename = filename[:-3]
+    elif filename.lower().endswith('.markdown'):
+        filename = filename[:-9]
+
+    # 再次检查去除扩展名后是否为空
+    if not filename.strip():
+        raise HTTPException(status_code=400, detail="文件名不能为空")
+
+    return filename
+
+
+@router.post("/create")
+async def create_file(
+    filename: str = Form(..., description="文件名（可不含扩展名，自动添加 .md）"),
+    target_dir: str = Form("", description="目标目录（相对路径，默认为根目录）")
+):
+    """
+    创建新的 Markdown 文件
+
+    - 自动添加 .md 扩展名
+    - 文件名冲突时自动重命名（添加数字后缀）
+    - 返回新文件信息，包含 file_id 用于前端跳转
+    """
+    # 1. 验证内容目录已配置
+    if not settings.CONTENT_DIR:
+        raise HTTPException(status_code=500, detail="内容目录未配置")
+
+    # 2. 验证并清理文件名
+    clean_name = _validate_filename(filename)
+
+    # 3. 添加 .md 扩展名
+    full_filename = f"{clean_name}.md"
+
+    # 4. 验证目标目录
+    target_path = _validate_target_dir(target_dir)
+
+    # 5. 获取唯一文件名（处理同名冲突）
+    safe_filename = _get_unique_filename(target_path, full_filename)
+
+    # 6. 创建文件，写入默认模板
+    file_path = target_path / safe_filename
+    # 使用文件名（不含扩展名）作为默认标题
+    title = safe_filename[:-3] if safe_filename.endswith('.md') else safe_filename
+    default_content = f"# {title}\n\n"
+
+    try:
+        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+            await f.write(default_content)
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="没有写入权限")
+    except Exception as e:
+        # 清理可能创建的不完整文件
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"创建文件失败: {str(e)}")
+
+    # 7. 触发目录刷新
+    library_service.invalidate_cache()
+
+    # 8. 获取新文件信息
+    rel_path = file_path.relative_to(settings.CONTENT_DIR)
+    file_id = _generate_file_id(str(rel_path))
+
+    return {
+        "status": "success",
+        "message": "文件创建成功",
+        "file": {
+            "id": file_id,
+            "name": safe_filename,
+            "path": str(rel_path),
+            "original_name": full_filename,
+            "renamed": safe_filename != full_filename
+        }
+    }
 
 
 @router.get("/events")
