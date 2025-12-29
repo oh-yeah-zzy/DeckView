@@ -83,7 +83,8 @@ class ServiceAtlasClient:
     async def _register(self) -> bool:
         """注册服务到 ServiceAtlas"""
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            # trust_env=False 禁用从环境变量读取代理配置
+            async with httpx.AsyncClient(timeout=10, trust_env=False) as client:
                 response = await client.post(
                     f"{self.registry_url}/api/v1/services",
                     json={
@@ -97,15 +98,19 @@ class ServiceAtlasClient:
                         "service_meta": self.metadata,
                     }
                 )
-                return response.status_code in (200, 201)
+                if response.status_code in (200, 201):
+                    return True
+                else:
+                    logger.warning(f"[ServiceAtlas] 注册返回状态码: {response.status_code}, 响应: {response.text}")
+                    return False
         except Exception as e:
-            logger.debug(f"[ServiceAtlas] 注册异常: {e}")
+            logger.warning(f"[ServiceAtlas] 注册异常: {type(e).__name__}: {e}")
             return False
 
     async def _unregister(self):
         """从 ServiceAtlas 注销服务"""
         try:
-            async with httpx.AsyncClient(timeout=5) as client:
+            async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
                 await client.delete(
                     f"{self.registry_url}/api/v1/services/{self.service_id}"
                 )
@@ -116,7 +121,7 @@ class ServiceAtlasClient:
         """心跳循环"""
         while self._running:
             try:
-                async with httpx.AsyncClient(timeout=5) as client:
+                async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
                     await client.post(
                         f"{self.registry_url}/api/v1/services/{self.service_id}/heartbeat"
                     )

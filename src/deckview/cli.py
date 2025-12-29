@@ -80,8 +80,15 @@ def main():
     set_content_dir(content_dir)
     ensure_directories()
 
-    # 设置是否启用文件监听
+    # 更新 host 和 port 到配置（供服务注册使用）
     import os
+    settings.HOST = args.host
+    settings.PORT = args.port
+    # 同时设置环境变量，确保 --reload 模式下也能正确读取
+    os.environ["DECKVIEW_HOST"] = args.host
+    os.environ["DECKVIEW_PORT"] = str(args.port)
+
+    # 设置是否启用文件监听
     os.environ["DECKVIEW_WATCH"] = "0" if args.no_watch else "1"
 
     # 打印启动信息
