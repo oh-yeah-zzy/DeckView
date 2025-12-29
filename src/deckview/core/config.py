@@ -24,6 +24,16 @@ def get_content_dir() -> Optional[Path]:
     return None
 
 
+def get_host() -> str:
+    """从环境变量获取监听地址"""
+    return os.environ.get("DECKVIEW_HOST", "127.0.0.1")
+
+
+def get_port() -> int:
+    """从环境变量获取监听端口"""
+    return int(os.environ.get("DECKVIEW_PORT", "8000"))
+
+
 class Settings(BaseSettings):
     """应用配置类"""
 
@@ -32,9 +42,9 @@ class Settings(BaseSettings):
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = True
 
-    # 服务器配置
-    HOST: str = "127.0.0.1"  # 默认只监听本地，安全考虑
-    PORT: int = 8000
+    # 服务器配置（从环境变量读取，支持 CLI 动态设置）
+    HOST: str = get_host()
+    PORT: int = get_port()
 
     # 内容目录（核心配置：指定要扫描的文档目录）
     # 通过环境变量 DECKVIEW_CONTENT_DIR 设置，支持 --reload 模式
@@ -45,6 +55,7 @@ class Settings(BaseSettings):
     CONVERTED_DIR: Path = DATA_DIR / "converted"
     THUMBNAIL_DIR: Path = DATA_DIR / "thumbnails"
     CACHE_DIR: Path = DATA_DIR / "cache"
+    LO_PROFILE_DIR: Path = DATA_DIR / "lo_profile"  # LibreOffice高质量PDF导出配置目录
 
     # 支持的文件扩展名
     ALLOWED_EXTENSIONS: Set[str] = {"pptx", "ppt", "pdf", "md", "markdown", "docx", "doc"}
@@ -63,7 +74,7 @@ class Settings(BaseSettings):
     CONVERSION_TIMEOUT: int = 120  # 转换超时时间（秒）
 
     # 缩略图配置
-    THUMBNAIL_WIDTH: int = 200
+    THUMBNAIL_WIDTH: int = 600  # 提高缩略图分辨率以改善首页预览清晰度
     THUMBNAIL_FORMAT: str = "png"
 
     # ServiceAtlas 服务注册配置
@@ -91,5 +102,5 @@ def set_content_dir(path: Path):
 
 def ensure_directories():
     """确保必要的目录存在"""
-    for dir_path in [settings.CONVERTED_DIR, settings.THUMBNAIL_DIR, settings.CACHE_DIR]:
+    for dir_path in [settings.CONVERTED_DIR, settings.THUMBNAIL_DIR, settings.CACHE_DIR, settings.LO_PROFILE_DIR]:
         dir_path.mkdir(parents=True, exist_ok=True)

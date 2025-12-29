@@ -253,22 +253,34 @@ async function renderPage(pageNum) {
         // 计算视口
         const viewport = page.getViewport({ scale: currentScale });
 
+        // 获取设备像素比，用于高DPI屏幕的清晰渲染
+        const outputScale = window.devicePixelRatio || 1;
+
         // 设置canvas尺寸
+        // canvas实际像素尺寸 = CSS尺寸 * devicePixelRatio，确保高清显示
         const canvas = pdfCanvas;
         const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        // CSS尺寸保持原始viewport尺寸
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
 
-        // 同步绘图canvas尺寸
+        // 同步绘图canvas尺寸（同样应用devicePixelRatio）
         if (drawingCanvas) {
-            drawingCanvas.width = viewport.width;
-            drawingCanvas.height = viewport.height;
+            drawingCanvas.width = Math.floor(viewport.width * outputScale);
+            drawingCanvas.height = Math.floor(viewport.height * outputScale);
+            drawingCanvas.style.width = `${viewport.width}px`;
+            drawingCanvas.style.height = `${viewport.height}px`;
         }
 
-        // 渲染页面
+        // 渲染页面，使用transform来适配高DPI
+        // transform矩阵格式：[scaleX, skewX, skewY, scaleY, translateX, translateY]
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
         await page.render({
             canvasContext: context,
-            viewport: viewport
+            viewport: viewport,
+            transform: transform
         }).promise;
 
         // 更新当前页
@@ -448,22 +460,34 @@ async function renderPageForce(pageNum) {
         // 计算视口
         const viewport = page.getViewport({ scale: currentScale });
 
+        // 获取设备像素比，用于高DPI屏幕的清晰渲染
+        const outputScale = window.devicePixelRatio || 1;
+
         // 设置canvas尺寸
+        // canvas实际像素尺寸 = CSS尺寸 * devicePixelRatio，确保高清显示
         const canvas = pdfCanvas;
         const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        // CSS尺寸保持原始viewport尺寸
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
 
-        // 同步绘图canvas尺寸
+        // 同步绘图canvas尺寸（同样应用devicePixelRatio）
         if (drawingCanvas) {
-            drawingCanvas.width = viewport.width;
-            drawingCanvas.height = viewport.height;
+            drawingCanvas.width = Math.floor(viewport.width * outputScale);
+            drawingCanvas.height = Math.floor(viewport.height * outputScale);
+            drawingCanvas.style.width = `${viewport.width}px`;
+            drawingCanvas.style.height = `${viewport.height}px`;
         }
 
-        // 渲染页面
+        // 渲染页面，使用transform来适配高DPI
+        // transform矩阵格式：[scaleX, skewX, skewY, scaleY, translateX, translateY]
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
         await page.render({
             canvasContext: context,
-            viewport: viewport
+            viewport: viewport,
+            transform: transform
         }).promise;
 
         // 更新当前页
@@ -1184,6 +1208,9 @@ function draw(e) {
 
     const coords = getCanvasCoords(e);
 
+    // 获取设备像素比，用于调整线条粗细以适配高DPI屏幕
+    const outputScale = window.devicePixelRatio || 1;
+
     drawingCtx.beginPath();
     drawingCtx.moveTo(lastX, lastY);
     drawingCtx.lineTo(coords.x, coords.y);
@@ -1192,12 +1219,14 @@ function draw(e) {
         // 橡皮擦模式 - 使用独立的橡皮擦大小
         drawingCtx.globalCompositeOperation = 'destination-out';
         drawingCtx.strokeStyle = 'rgba(0,0,0,1)';
-        drawingCtx.lineWidth = parseInt(eraserSize.value);
+        // lineWidth需要乘以devicePixelRatio以保持视觉一致性
+        drawingCtx.lineWidth = parseInt(eraserSize.value) * outputScale;
     } else {
         // 画笔模式
         drawingCtx.globalCompositeOperation = 'source-over';
         drawingCtx.strokeStyle = penColor.value;
-        drawingCtx.lineWidth = parseInt(penSize.value);
+        // lineWidth需要乘以devicePixelRatio以保持视觉一致性
+        drawingCtx.lineWidth = parseInt(penSize.value) * outputScale;
     }
 
     drawingCtx.lineCap = 'round';

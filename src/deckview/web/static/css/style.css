@@ -308,11 +308,37 @@ body {
 /* ============ 侧边栏 ============ */
 .sidebar {
     width: var(--sidebar-width);
+    min-width: 200px;
+    max-width: 600px;
     background: var(--sidebar-bg);
     color: var(--sidebar-text);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+}
+
+/* 侧边栏宽度调整器 */
+.sidebar-resizer {
+    width: 4px;
+    background: transparent;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.dragging {
+    background: var(--primary-color);
+}
+
+.sidebar-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    right: -4px;
+    bottom: 0;
 }
 
 .sidebar-header {

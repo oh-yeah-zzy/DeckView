@@ -12,6 +12,21 @@ from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# LibreOffice高质量PDF导出配置模板
+# 使用无损压缩、不降低图像分辨率，保持最高质量
+LO_PDF_CONFIG_TEMPLATE = '''<?xml version="1.0" encoding="UTF-8"?>
+<oor:items xmlns:oor="http://openoffice.org/2001/registry"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<item oor:path="/org.openoffice.Office.Common/Filter/PDF/Export">
+  <prop oor:name="UseLosslessCompression" oor:op="fuse"><value>true</value></prop>
+  <prop oor:name="ReduceImageResolution" oor:op="fuse"><value>false</value></prop>
+  <prop oor:name="Quality" oor:op="fuse"><value>100</value></prop>
+  <prop oor:name="MaxImageResolution" oor:op="fuse"><value>1200</value></prop>
+</item>
+</oor:items>
+'''
+
 
 class ConversionService:
     """文档转换服务类"""
@@ -20,6 +35,42 @@ class ConversionService:
         """初始化转换服务"""
         self.libreoffice_path = settings.LIBREOFFICE_PATH
         self.timeout = settings.CONVERSION_TIMEOUT
+        self.profile_dir = settings.LO_PROFILE_DIR
+        # 初始化时确保高质量PDF配置已创建
+        self._ensure_hq_pdf_config()
+
+    def _ensure_hq_pdf_config(self):
+        """
+        确保LibreOffice高质量PDF导出配置文件存在
+
+        创建一个专用的LibreOffice用户配置目录，包含高质量PDF导出设置：
+        - UseLosslessCompression=true: 使用无损压缩（PNG格式）
+        - ReduceImageResolution=false: 不降低图像分辨率
+        - Quality=100: 最高质量
+        - MaxImageResolution=1200: 最大分辨率1200 DPI
+        """
+        try:
+            # 确保profile目录存在
+            self.profile_dir.mkdir(parents=True, exist_ok=True)
+
+            # 创建user目录结构
+            user_dir = self.profile_dir / "user"
+            user_dir.mkdir(exist_ok=True)
+
+            # 写入配置文件
+            config_file = user_dir / "registrymodifications.xcu"
+
+            # 只在配置文件不存在时创建，避免覆盖用户自定义配置
+            if not config_file.exists():
+                config_file.write_text(LO_PDF_CONFIG_TEMPLATE, encoding='utf-8')
+                logger.info(f"已创建LibreOffice高质量PDF导出配置: {config_file}")
+
+        except Exception as e:
+            logger.warning(f"创建LibreOffice配置失败（将使用默认配置）: {e}")
+
+    def _get_profile_uri(self) -> str:
+        """获取LibreOffice profile目录的URI格式路径"""
+        return self.profile_dir.resolve().as_uri()
 
     async def _convert_to_pdf(self, input_path: Path, output_dir: Path, doc_type: str) -> Tuple[bool, Optional[Path], Optional[str]]:
         """
@@ -40,12 +91,15 @@ class ConversionService:
             # --headless: 无界面模式
             # --convert-to pdf: 转换为PDF格式
             # --outdir: 指定输出目录
+            # -env:UserInstallation: 使用自定义profile（包含高质量PDF导出配置）
+            profile_uri = self._get_profile_uri()
             cmd = [
                 self.libreoffice_path,
                 '--headless',
                 '--invisible',
                 '--nologo',
                 '--nofirststartwizard',
+                f'-env:UserInstallation={profile_uri}',
                 '--convert-to', 'pdf',
                 '--outdir', str(output_dir),
                 str(input_path)

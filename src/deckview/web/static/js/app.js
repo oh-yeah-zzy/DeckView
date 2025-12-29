@@ -1683,10 +1683,76 @@ function bindCreateEvents() {
     createSubmitBtn.addEventListener('click', performCreate);
 }
 
+// ============ 侧边栏宽度调整 ============
+
+/**
+ * 初始化侧边栏宽度调整功能
+ */
+function initSidebarResizer() {
+    const sidebar = document.getElementById('sidebar');
+    const resizer = document.getElementById('sidebarResizer');
+
+    if (!sidebar || !resizer) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    // 从localStorage恢复保存的宽度
+    const savedWidth = localStorage.getItem('deckview-sidebar-width');
+    if (savedWidth) {
+        const width = parseInt(savedWidth);
+        if (width >= 200 && width <= 600) {
+            sidebar.style.width = width + 'px';
+        }
+    }
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const diff = e.clientX - startX;
+        let newWidth = startWidth + diff;
+
+        // 限制宽度范围
+        newWidth = Math.max(200, Math.min(600, newWidth));
+
+        sidebar.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            // 保存宽度到localStorage
+            localStorage.setItem('deckview-sidebar-width', sidebar.offsetWidth);
+        }
+    });
+
+    // 双击重置为默认宽度
+    resizer.addEventListener('dblclick', () => {
+        sidebar.style.width = '280px';
+        localStorage.setItem('deckview-sidebar-width', '280');
+    });
+}
+
 // ============ 初始化 ============
 
 document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
     loadTree();
     connectEventSource();
+    initSidebarResizer();
 });
