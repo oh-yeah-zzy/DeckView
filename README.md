@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0.0-orange)](https://github.com/your-repo/deckview)
+[![Version](https://img.shields.io/badge/Version-2.1.0-orange)](https://github.com/your-repo/deckview)
 
 一个基于 Python 的本地文档服务器，支持在线预览 PPT、PDF、Word 和 Markdown 文件，并支持在线新建与编辑 Markdown。
 
@@ -19,23 +19,52 @@
 
 ## 功能特性
 
+### 核心功能
+
 | 功能 | 描述 |
 |:---:|:---|
 | **目录扫描** | 指定目录启动，自动扫描所有文档文件 |
-| **目录树导航** | 左侧树形结构展示，支持搜索和折叠 |
-| **PPT/Word 预览** | 自动转换为 PDF 并在线预览 |
-| **PDF 预览** | 直接预览，支持缩放、翻页 |
+| **目录树导航** | 左侧树形结构展示，支持搜索、折叠，**宽度可拖拽调整** |
+| **PPT/Word 预览** | 自动转换为高清 PDF 并在线预览 |
+| **PDF 预览** | 直接预览，支持缩放、翻页、**高DPI屏幕优化** |
 | **Markdown 渲染** | 支持 GFM 语法，代码高亮 |
-| **Markdown 编辑** | 在线新建、编辑 Markdown 文件，实时预览 |
-| **文件上传** | 支持上传文档和附件到当前目录 |
-| **实时监听** | 文件变化时自动刷新目录树 |
-| **缩略图导航** | PDF/PPT 自动生成页面缩略图 |
+| **Markdown 编辑** | 在线新建、编辑 Markdown 文件，实时预览，自动保存 |
+| **文件上传** | 支持上传文档到指定目录 |
+| **实时监听** | 文件变化时自动刷新目录树（SSE 推送） |
+
+### 预览增强
+
+| 功能 | 描述 |
+|:---:|:---|
+| **首页快速预览** | 点击文件直接在首页右侧预览，无需打开新页面 |
+| **缩略图导航** | PDF/PPT 自动生成高清页面缩略图（600px） |
+| **画笔标注** | 在 PDF/PPT 上绘制标注，支持多种颜色和粗细 |
+| **橡皮擦** | 擦除标注内容，支持调整大小 |
+| **撤销/重做** | 标注操作支持撤销和重做 |
+| **高清渲染** | 支持高 DPI 屏幕（Retina），显示清晰锐利 |
+
+### 界面与主题
+
+| 功能 | 描述 |
+|:---:|:---|
+| **多主题切换** | 亮色、暗色、护眼绿、深蓝海洋四种主题 |
+| **侧边栏调整** | 拖拽调整侧边栏宽度，自动保存设置 |
+| **响应式布局** | 适配不同屏幕尺寸 |
+
+### 高级功能
+
+| 功能 | 描述 |
+|:---:|:---|
+| **服务注册** | 可选集成 ServiceAtlas 服务注册中心 |
+| **缓存管理** | 自动管理转换缓存，清理孤立文件 |
+| **无损转换** | PPT/Word 转 PDF 使用无损压缩，保持图像质量 |
 
 ## 使用场景
 
 - **个人笔记** — 在本地或服务器部署，随时通过浏览器记录和查阅笔记
 - **团队知识库** — 局域网部署，团队成员共享文档和协作编辑
 - **文档资料库** — 集中管理 PDF、PPT、Word、Markdown 等多种格式的资料
+- **演示文稿查看** — 在线预览 PPT，支持画笔标注进行讲解
 
 ## 快速开始
 
@@ -125,6 +154,18 @@ brew install libreoffice
 </tr>
 </table>
 
+## 界面预览
+
+### 主要操作
+
+- **预览文件**：点击左侧文件，在右侧快速预览
+- **单独查看**：点击"单独查看"按钮，在新页面打开完整查看器
+- **画笔标注**：点击画笔图标，在 PDF/PPT 上进行标注
+- **调整侧边栏**：拖拽侧边栏右边缘调整宽度，双击恢复默认
+- **切换主题**：点击右下角主题按钮切换显示主题
+- **新建文件**：点击工具栏"📝"按钮新建 Markdown 文件
+- **上传文件**：点击工具栏"📤"按钮上传文档
+
 ## 项目结构
 
 ```
@@ -138,8 +179,10 @@ DeckView/
     ├── services/            # 业务逻辑层
     │   ├── library.py       # 文件扫描服务
     │   ├── watcher.py       # 文件监听服务
-    │   ├── conversion.py    # PPT/Word → PDF
-    │   └── thumbnail.py     # 缩略图生成
+    │   ├── conversion.py    # PPT/Word → PDF（无损压缩）
+    │   ├── thumbnail.py     # 缩略图生成
+    │   ├── cache_manager.py # 缓存管理
+    │   └── registry.py      # ServiceAtlas 服务注册
     └── web/                 # 前端资源
         ├── templates/       # HTML 模板
         └── static/          # CSS/JS
@@ -155,18 +198,39 @@ DeckView/
 | `/api/library/files/{id}` | GET | 获取文件信息 |
 | `/api/library/files/{id}/pdf` | GET | 获取 PDF 文件 |
 | `/api/library/files/{id}/thumbnails/{page}` | GET | 获取缩略图 |
-| `/api/library/files/{id}/content` | GET | 获取 Markdown 内容 |
+| `/api/library/files/{id}/content` | GET/PUT | 获取/更新 Markdown 内容 |
+| `/api/library/upload` | POST | 上传文件 |
+| `/api/library/create` | POST | 新建 Markdown 文件 |
 | `/api/library/events` | GET | SSE 事件流（文件变化通知） |
+| `/health` | GET | 健康检查 |
 
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 |------|:------:|------|
-| `HOST` | `127.0.0.1` | 监听地址 |
-| `PORT` | `8000` | 服务端口 |
+| `DECKVIEW_HOST` | `127.0.0.1` | 监听地址 |
+| `DECKVIEW_PORT` | `8000` | 服务端口 |
 | `DECKVIEW_DATA_DIR` | `~/.deckview` | 数据目录（缓存 PDF 和缩略图） |
 | `LIBREOFFICE_PATH` | `soffice` | LibreOffice 路径 |
 | `CONVERSION_TIMEOUT` | `120` | 转换超时时间（秒） |
+
+## 数据目录
+
+DeckView 的缓存数据存储在 `~/.deckview/` 目录：
+
+```
+~/.deckview/
+├── converted/      # PPT/Word 转换后的 PDF 文件
+├── thumbnails/     # 页面缩略图
+├── cache/          # 其他缓存
+└── lo_profile/     # LibreOffice 高质量导出配置
+```
+
+清除缓存：
+```bash
+# 清除所有缓存（重新转换所有文件）
+rm -rf ~/.deckview/converted/* ~/.deckview/thumbnails/*
+```
 
 ## 注意事项
 
@@ -175,7 +239,7 @@ DeckView/
 - **作为笔记软件使用时**：建议仅在内网部署，或配合反向代理添加认证
 - 确保扫描目录具有写权限，以支持新建和编辑功能
 - PPT/Word 转换依赖 LibreOffice，首次转换可能较慢
-- 转换后的 PDF 和缩略图缓存在 `~/.deckview/` 目录
+- 转换使用无损压缩，生成的 PDF 文件较大但图像质量高
 - 建议定期备份笔记目录中的重要文件
 
 ## 未来计划
