@@ -6,6 +6,9 @@
 // 配置PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+// 获取 base path（从模板传递）
+const BASE_PATH = window.BASE_PATH || '';
+
 // 全局变量
 let pdfDoc = null;          // PDF文档对象
 let currentPage = 1;        // 当前页码
@@ -118,7 +121,7 @@ function initDOMReferences() {
 async function initViewer() {
     try {
         // 获取文档信息
-        const response = await fetch(`/api/library/files/${DOC_ID}`);
+        const response = await fetch(`${BASE_PATH}/api/library/files/${DOC_ID}`);
         if (!response.ok) {
             throw new Error('文档不存在');
         }
@@ -152,7 +155,7 @@ async function waitForProcessing() {
     let waited = 0;
 
     while (waited < maxWait) {
-        const response = await fetch(`/api/documents/${DOC_ID}/status`);
+        const response = await fetch(`${BASE_PATH}/api/documents/${DOC_ID}/status`);
         const status = await response.json();
 
         if (status.status === 'completed') {
@@ -177,7 +180,7 @@ async function initPdfViewer() {
 
     try {
         // 加载PDF文档（首次访问PPTX时会自动触发转换）
-        const pdfUrl = `/api/library/files/${DOC_ID}/pdf`;
+        const pdfUrl = `${BASE_PATH}/api/library/files/${DOC_ID}/pdf`;
         pdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
         totalPages = pdfDoc.numPages;
 
@@ -193,7 +196,7 @@ async function initPdfViewer() {
         if (penTools) penTools.style.display = 'flex';  // 显示画笔工具栏
 
         // 重新获取文档信息（获取缩略图URL）
-        const response = await fetch(`/api/library/files/${DOC_ID}`);
+        const response = await fetch(`${BASE_PATH}/api/library/files/${DOC_ID}`);
         docInfo = await response.json();
 
         // 加载缩略图
@@ -516,7 +519,7 @@ async function initMarkdownViewer() {
 
     try {
         // 获取Markdown内容
-        const response = await fetch(`/api/library/files/${DOC_ID}/content`);
+        const response = await fetch(`${BASE_PATH}/api/library/files/${DOC_ID}/content`);
         if (!response.ok) {
             throw new Error('内容加载失败');
         }
@@ -720,7 +723,7 @@ async function saveMarkdown(silent = false) {
     updateSaveStatus('saving');
 
     try {
-        const response = await fetch(`/api/library/files/${DOC_ID}/content`, {
+        const response = await fetch(`${BASE_PATH}/api/library/files/${DOC_ID}/content`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'text/plain; charset=utf-8'

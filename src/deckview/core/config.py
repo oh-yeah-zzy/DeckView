@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     SERVICE_ID: str = "deckview"  # 服务唯一标识
     HEARTBEAT_INTERVAL: int = 30  # 心跳间隔（秒）
 
+    # Base Path（用于反向代理场景，如通过 /s/deckview/ 访问）
+    # 设置后所有静态资源和链接都会添加此前缀
+    # 环境变量: DECKVIEW_BASE_PATH
+    BASE_PATH: str = os.environ.get("DECKVIEW_BASE_PATH", "")
+
     class Config:
         env_file = ".env"
         case_sensitive = True

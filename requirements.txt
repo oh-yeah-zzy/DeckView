@@ -23,3 +23,10 @@ watchdog>=3.0.0
 
 # 工具
 python-dotenv>=1.0.0
+
+# HTTP 客户端（用于服务注册）
+httpx>=0.25.0
+
+# ServiceAtlas SDK（可选，用于服务注册）
+# 安装方式：pip install -e /path/to/ServiceAtlas/sdk
+# 或者：pip install serviceatlas-client

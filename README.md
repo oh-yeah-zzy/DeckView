@@ -213,6 +213,27 @@ DeckView/
 | `DECKVIEW_DATA_DIR` | `~/.deckview` | 数据目录（缓存 PDF 和缩略图） |
 | `LIBREOFFICE_PATH` | `soffice` | LibreOffice 路径 |
 | `CONVERSION_TIMEOUT` | `120` | 转换超时时间（秒） |
+| `DECKVIEW_BASE_PATH` | （空） | URL 前缀，用于反向代理场景 |
+
+### 反向代理配置（Base Path）
+
+当 DeckView 通过认证网关（如 Aegis）代理访问时，需要设置 `DECKVIEW_BASE_PATH` 环境变量，使静态资源和 API 请求正确工作。
+
+**场景说明**：
+- 直接访问：`http://localhost:8080/` → 不需要设置
+- 通过网关代理访问：`http://aegis:8000/s/deckview/` → 需要设置 `DECKVIEW_BASE_PATH=/s/deckview`
+
+**启动示例**：
+
+```bash
+# 直接访问模式（不设置）
+deckview /path/to/docs --host 127.0.0.1 --port 8080
+
+# 通过 Aegis 网关代理访问（设置 BASE_PATH）
+DECKVIEW_BASE_PATH=/s/deckview deckview /path/to/docs --host 127.0.0.1 --port 8080
+```
+
+**注意**：设置 `DECKVIEW_BASE_PATH` 后，直接访问 `http://localhost:8080/` 将无法正常工作，因为静态资源和 API 路径会变成 `/s/deckview/static/...` 和 `/s/deckview/api/...`。请根据实际访问方式选择是否设置
 
 ## 数据目录
 

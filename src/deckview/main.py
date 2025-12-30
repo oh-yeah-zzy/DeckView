@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):
             host=settings.HOST,
             port=settings.PORT,
             health_check_path="/health",
+            base_path=settings.BASE_PATH,  # 注册 base_path 到 ServiceAtlas
             metadata={
                 "version": settings.APP_VERSION,
                 "description": "在线预览 PPT、PDF、Word、Markdown 文件"
@@ -136,7 +137,8 @@ async def index(request: Request):
     content_dir_name = settings.CONTENT_DIR.name if settings.CONTENT_DIR else "未配置"
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "content_dir": content_dir_name
+        "content_dir": content_dir_name,
+        "base_path": settings.BASE_PATH.rstrip("/"),
     })
 
 
@@ -145,7 +147,8 @@ async def view_document(request: Request, file_id: str):
     """文档查看页面"""
     return templates.TemplateResponse("viewer.html", {
         "request": request,
-        "doc_id": file_id
+        "doc_id": file_id,
+        "base_path": settings.BASE_PATH.rstrip("/"),
     })
 
 

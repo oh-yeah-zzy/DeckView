@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文档查看器 - DeckView</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/viewer.css">
+    <link rel="stylesheet" href="{{ base_path }}/static/css/style.css">
+    <link rel="stylesheet" href="{{ base_path }}/static/css/viewer.css">
+    <!-- 将 base_path 传递给 JavaScript -->
+    <script>window.BASE_PATH = "{{ base_path }}";</script>
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <!-- marked.js for Markdown -->
@@ -26,7 +28,7 @@
     <!-- 顶部工具栏 -->
     <header class="viewer-header">
         <div class="header-left">
-            <a href="/" class="back-btn" title="返回首页">← 返回</a>
+            <a href="{{ base_path }}/" class="back-btn" title="返回首页">← 返回</a>
             <span class="doc-title" id="docTitle">加载中...</span>
         </div>
         <div class="header-center">
@@ -175,7 +177,7 @@
         window.DOC_ID = "{{ doc_id }}";
     </script>
     <!-- 主题脚本（在其他脚本之前加载，避免闪烁） -->
-    <script src="/static/js/theme.js"></script>
-    <script src="/static/js/viewer.js"></script>
+    <script src="{{ base_path }}/static/js/theme.js"></script>
+    <script src="{{ base_path }}/static/js/viewer.js"></script>
 </body>
 </html>

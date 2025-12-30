@@ -6,8 +6,11 @@
 // 配置PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// API基础路径
-const API_BASE = '/api/library';
+// 获取 base path（从模板传递）
+const BASE_PATH = window.BASE_PATH || '';
+
+// API基础路径（添加 BASE_PATH 前缀）
+const API_BASE = BASE_PATH + '/api/library';
 
 // DOM元素引用 - 侧边栏
 const fileTree = document.getElementById('fileTree');
@@ -984,7 +987,7 @@ function bindEvents() {
     // 单独查看按钮
     openInNewPageBtn.addEventListener('click', () => {
         if (currentFileId) {
-            window.open(`/view/${currentFileId}`, '_blank');
+            window.open(`${BASE_PATH}/view/${currentFileId}`, '_blank');
         }
     });
 
