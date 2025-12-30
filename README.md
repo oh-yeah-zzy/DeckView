@@ -9,6 +9,8 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.1.0-orange)](https://github.com/your-repo/deckview)
 
+中文 | [English](README_EN.md)
+
 一个基于 Python 的本地文档服务器，支持在线预览 PPT、PDF、Word 和 Markdown 文件，并支持在线新建与编辑 Markdown。
 
 **可作为自部署笔记软件使用** — 将扫描目录当作你的个人笔记库或团队知识库
