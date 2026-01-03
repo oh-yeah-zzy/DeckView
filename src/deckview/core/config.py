@@ -31,7 +31,22 @@ def get_host() -> str:
 
 def get_port() -> int:
     """从环境变量获取监听端口"""
-    return int(os.environ.get("DECKVIEW_PORT", "8000"))
+    return int(os.environ.get("DECKVIEW_PORT", "8800"))
+
+
+def get_debug() -> bool:
+    """从环境变量获取是否启用调试模式"""
+    return os.environ.get("DECKVIEW_DEBUG", "false").lower() == "true"
+
+
+def get_registry_enabled() -> bool:
+    """从环境变量获取是否启用服务注册"""
+    return os.environ.get("DECKVIEW_REGISTRY_ENABLED", "true").lower() == "true"
+
+
+def get_registry_url() -> str:
+    """从环境变量获取注册中心地址"""
+    return os.environ.get("DECKVIEW_REGISTRY_URL", "http://127.0.0.1:8888")
 
 
 class Settings(BaseSettings):
@@ -40,7 +55,7 @@ class Settings(BaseSettings):
     # 应用基本信息
     APP_NAME: str = "DeckView"
     APP_VERSION: str = "2.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = get_debug()
 
     # 服务器配置（从环境变量读取，支持 CLI 动态设置）
     HOST: str = get_host()
@@ -78,8 +93,8 @@ class Settings(BaseSettings):
     THUMBNAIL_FORMAT: str = "png"
 
     # ServiceAtlas 服务注册配置
-    REGISTRY_ENABLED: bool = True  # 是否启用服务注册
-    REGISTRY_URL: str = "http://127.0.0.1:9000"  # ServiceAtlas 注册中心地址
+    REGISTRY_ENABLED: bool = get_registry_enabled()  # 是否启用服务注册
+    REGISTRY_URL: str = get_registry_url()  # ServiceAtlas 注册中心地址
     SERVICE_ID: str = "deckview"  # 服务唯一标识
     HEARTBEAT_INTERVAL: int = 30  # 心跳间隔（秒）
 

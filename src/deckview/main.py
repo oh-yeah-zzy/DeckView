@@ -42,7 +42,18 @@ async def lifespan(app: FastAPI):
             base_path=settings.BASE_PATH,  # 注册 base_path 到 ServiceAtlas
             metadata={
                 "version": settings.APP_VERSION,
-                "description": "在线预览 PPT、PDF、Word、Markdown 文件"
+                "description": "在线预览 PPT、PDF、Word、Markdown 文件",
+                # 声明认证需求，ServiceAtlas 会自动将此配置添加到路由规则
+                "auth_config": {
+                    "require_auth": True,
+                    "auth_service_id": "aegis",
+                    "public_paths": [
+                        "/health",
+                        "/api/docs",
+                        "/api/docs/**",
+                        "/api/openapi.json",
+                    ],
+                },
             },
             heartbeat_interval=settings.HEARTBEAT_INTERVAL,
         )
@@ -131,6 +142,21 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(templates_dir))
 
 
+def get_base_path(request: Request) -> str:
+    """
+    获取 base path，优先从代理 header 读取
+
+    当通过 Hermes 网关代理访问时，X-Forwarded-Prefix 会包含路径前缀（如 /deckview）
+    直接访问时使用配置中的 BASE_PATH
+    """
+    # 优先从 X-Forwarded-Prefix header 读取
+    forwarded_prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+    if forwarded_prefix:
+        return forwarded_prefix
+    # 否则使用配置中的值
+    return settings.BASE_PATH.rstrip("/")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """首页 - 目录树导航页面"""
@@ -138,7 +164,7 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {
         "request": request,
         "content_dir": content_dir_name,
-        "base_path": settings.BASE_PATH.rstrip("/"),
+        "base_path": get_base_path(request),
     })
 
 
@@ -148,7 +174,7 @@ async def view_document(request: Request, file_id: str):
     return templates.TemplateResponse("viewer.html", {
         "request": request,
         "doc_id": file_id,
-        "base_path": settings.BASE_PATH.rstrip("/"),
+        "base_path": get_base_path(request),
     })
 
 

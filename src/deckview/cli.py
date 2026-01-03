@@ -34,12 +34,12 @@ def main():
     parser.add_argument(
         "-p", "--port",
         type=int,
-        default=8000,
-        help="服务端口（默认: 8000）"
+        default=8800,
+        help="服务端口（默认: 8800）"
     )
 
     parser.add_argument(
-        "--host",
+        "-H", "--host",
         type=str,
         default="127.0.0.1",
         help="监听地址（默认: 127.0.0.1，仅本地访问）"
@@ -54,7 +54,26 @@ def main():
     parser.add_argument(
         "--reload",
         action="store_true",
-        help="开发模式：代码变化时自动重载"
+        help="启用热重载（开发模式）"
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="启用调试模式"
+    )
+
+    parser.add_argument(
+        "--registry-url",
+        type=str,
+        default=None,
+        help="ServiceAtlas 注册中心地址"
+    )
+
+    parser.add_argument(
+        "--no-registry",
+        action="store_true",
+        help="禁用服务注册"
     )
 
     parser.add_argument(
@@ -91,6 +110,19 @@ def main():
     # 设置是否启用文件监听
     os.environ["DECKVIEW_WATCH"] = "0" if args.no_watch else "1"
 
+    # 设置调试模式
+    if args.debug:
+        os.environ["DECKVIEW_DEBUG"] = "true"
+        settings.DEBUG = True
+
+    # 设置服务注册相关配置
+    if args.registry_url:
+        os.environ["DECKVIEW_REGISTRY_URL"] = args.registry_url
+        settings.REGISTRY_URL = args.registry_url
+    if args.no_registry:
+        os.environ["DECKVIEW_REGISTRY_ENABLED"] = "false"
+        settings.REGISTRY_ENABLED = False
+
     # 打印启动信息
     print()
     print("=" * 50)
@@ -99,7 +131,12 @@ def main():
     print()
     print(f"  文档目录: {content_dir}")
     print(f"  访问地址: http://{args.host}:{args.port}")
+    print(f"  调试模式: {'已启用' if args.debug else '已禁用'}")
+    print(f"  热重载:   {'已启用' if args.reload else '已禁用'}")
     print(f"  文件监听: {'已禁用' if args.no_watch else '已启用'}")
+    print(f"  服务注册: {'已禁用' if args.no_registry else '已启用'}")
+    if not args.no_registry:
+        print(f"  注册中心: {settings.REGISTRY_URL}")
     print()
     print("  按 Ctrl+C 停止服务")
     print()
@@ -111,7 +148,7 @@ def main():
         host=args.host,
         port=args.port,
         reload=args.reload,
-        log_level="info"
+        log_level="debug" if args.debug else "info"
     )
 
 
